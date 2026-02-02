@@ -1,0 +1,46 @@
+---
+description: 保持项目与 GitHub 同步
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Git 同步规则
+
+此项目已连接到 GitHub 仓库：
+- **远程仓库**: https://github.com/leochanguang-alt/Stock_Company_Analysis
+
+## 同步要求
+
+当对以下文件/目录进行修改时，在任务完成后应提交并推送到 GitHub：
+
+- `scripts/` - Python 和 Node.js 脚本
+- `supabase/` - 数据库迁移文件
+- `koyfin_dashboard_*.html` - Dashboard 页面
+- `README.md` - 项目文档
+- `.gitignore` - Git 忽略配置
+
+## 提交规范
+
+提交信息格式：
+- `feat:` 新功能
+- `fix:` Bug 修复
+- `perf:` 性能优化
+- `docs:` 文档更新
+- `refactor:` 代码重构
+
+## 忽略的文件
+
+以下文件/目录不应提交：
+- `outputs/` - 数据文件
+- `node_modules/` - Node 依赖
+- `.venv/` - Python 虚拟环境
+- `.env` - 环境变量（含敏感信息）
+- `original_data_csv/` - 原始数据
+
+## 同步命令
+
+```bash
+git add -A
+git commit -m "描述性提交信息"
+git push origin main
+```

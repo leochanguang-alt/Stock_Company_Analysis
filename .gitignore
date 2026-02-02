@@ -15,7 +15,8 @@ outputs/
 original_data_csv/
 
 # IDE
-.cursor/
+.cursor/*
+!.cursor/rules/
 .vscode/
 .idea/
 

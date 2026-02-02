@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美国宏观经济数据 | US Macro Economic Data</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --economist-red: #e3120b;
+            --bg-white: #ffffff;
+            --bg-gray: #f6f6f6;
+            --bg-dark: #1a1a2e;
+            --text-dark: #333333;
+            --text-muted: #666666;
+            --border-color: #dddddd;
+            --positive-green: #1a7f37;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background-color: var(--bg-gray); 
+            color: var(--text-dark); 
+            line-height: 1.5;
+        }
+
+        .header {
+            background: var(--bg-dark);
+            color: #fff;
+            padding: 25px 40px;
+            border-bottom: 4px solid var(--economist-red);
+        }
+        .header h1 {
+            font-family: 'Lora', serif;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header h1 span { color: var(--economist-red); }
+        .header .subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 40px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+        .control-group select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fff;
+            cursor: pointer;
+            min-width: 120px;
+        }
+        .control-group select:hover {
+            border-color: var(--economist-red);
+        }
+
+        .chart-section {
+            background: #fff;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .chart-section h2 {
+            font-family: 'Lora', serif;
+            font-size: 20px;
+            margin-bottom: 5px;
+            color: var(--text-dark);
+        }
+        .chart-section .chart-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
+        .chart-container.small {
+            height: 300px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--economist-red);
+        }
+        .summary-card .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .summary-card .value {
+            font-family: 'Lora', serif;
+            font-size: 26px;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+        .summary-card .desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .summary-card .change {
+            font-size: 12px;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+        .summary-card .change.positive { color: var(--positive-green); }
+        .summary-card .change.negative { color: var(--economist-red); }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+        @media (max-width: 1000px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+
+        .insight-box {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-left: 4px solid var(--economist-red);
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 0 8px 8px 0;
+        }
+        .insight-box h3 {
+            font-family: 'Lora', serif;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: var(--text-dark);
+        }
+        .insight-box p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .insight-box .highlight {
+            color: var(--economist-red);
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 12px;
+            border-top: 1px solid var(--border-color);
+            background: #fff;
+            margin-top: 30px;
+        }
+
+        .legend-inline {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <h1>美国宏观经济<span>数据</span></h1>
+    <p class="subtitle">以 M2 为基准的指标比率分析 | 1959 - 2025 | 数据来源：Choice</p>
+</header>
+
+<div class="container">
+    <!-- Insight Box -->
+    <div class="insight-box">
+        <h3>📊 为什么以 M2 为基准？</h3>
+        <p>
+            M2 货币供应量是衡量经济体流动性的重要指标。将其他指标与 M2 对比，可以消除通胀和货币扩张的影响，
+            更清晰地看出<span class="highlight">实际经济活动</span>相对于<span class="highlight">货币供应</span>的变化趋势。
+            比率上升意味着该指标增速快于货币扩张，反之则慢于货币扩张。
+        </p>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="summary-cards" id="summary-cards"></div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <div class="control-group">
+            <label>📅 时间范围:</label>
+            <select id="time-range">
+                <option value="all">全部 (1959-2025)</option>
+                <option value="50y">近50年</option>
+                <option value="20y">近20年</option>
+                <option value="10y" selected>近10年</option>
+                <option value="5y">近5年</option>
+                <option value="3y">近3年</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Main Ratio Chart -->
+    <div class="chart-section">
+        <h2>各指标与 M2 比率趋势</h2>
+        <p class="chart-subtitle">数值 > 1 表示该指标总量大于M2，数值越高表示相对M2增长越快</p>
+        <div class="legend-inline">
+            <div class="legend-item"><span class="legend-dot" style="background:#4169E1"></span> 个人总收入/M2</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#FF6600"></span> 个人消费支出/M2</div>
+            <div class="legend-item"><span class="legend-dot" style="background:#1a7f37"></span> 可支配收入/M2</div>
+        </div>
+        <div class="chart-container">
+            <canvas id="main-ratio-chart"></canvas>
+        </div>
+    </div>
+
+    <!-- Individual Charts Grid -->
+    <div class="grid-2">
+        <div class="chart-section">
+            <h2>收入类指标 / M2</h2>
+            <p class="chart-subtitle">个人总收入 & 可支配收入 相对 M2 的比率</p>
+            <div class="chart-container small">
+                <canvas id="income-ratio-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>消费信贷 / M2</h2>
+            <p class="chart-subtitle">消费信贷占货币供应的比例变化</p>
+            <div class="chart-container small">
+                <canvas id="credit-ratio-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>储蓄存款 / M2</h2>
+            <p class="chart-subtitle">储蓄占货币供应的比例 - 反映储蓄意愿</p>
+            <div class="chart-container small">
+                <canvas id="savings-ratio-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-section">
+            <h2>消费支出 / M2</h2>
+            <p class="chart-subtitle">消费支出相对货币供应的比例</p>
+            <div class="chart-container small">
+                <canvas id="consumption-ratio-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Raw Data Chart -->
+    <div class="chart-section">
+        <h2>原始数据对比</h2>
+        <p class="chart-subtitle">各指标绝对值走势 (单位: 十亿美元)</p>
+        <div class="chart-container">
+            <canvas id="raw-data-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>© 2026 Antigravity Analytics | 数据来源：妙想Choice</p>
+</footer>
+
+<script src="macro_edb_data.js"></script>
+<script>
+    const colors = {
+        '个人总收入/M2': '#4169E1',
+        '个人消费支出/M2': '#FF6600',
+        '消费信贷/M2': '#8b5cf6',
+        '可支配收入/M2': '#1a7f37',
+        '储蓄存款/M2': '#0891b2'
+    };
+
+    const rawColors = {
+        '个人总收入': '#4169E1',
+        'M2': '#DC143C',
+        '个人消费支出': '#FF6600',
+        '消费信贷': '#8b5cf6',
+        '可支配收入': '#1a7f37',
+        '储蓄存款': '#0891b2'
+    };
+
+    let charts = {};
+    let currentRange = '10y';
+
+    function getFilteredIndices() {
+        const dates = macroData.dates;
+        const now = new Date();
+        let startIdx = 0;
+
+        if (currentRange !== 'all') {
+            const years = parseInt(currentRange);
+            const startDate = new Date(now.getFullYear() - years, now.getMonth(), 1);
+            for (let i = 0; i < dates.length; i++) {
+                const d = new Date(dates[i] + '-01');
+                if (d >= startDate) {
+                    startIdx = i;
+                    break;
+                }
+            }
+        }
+
+        return { startIdx, endIdx: dates.length };
+    }
+
+    function getFilteredData(dataObj, startIdx) {
+        const result = {};
+        for (const [key, arr] of Object.entries(dataObj)) {
+            result[key] = arr.slice(startIdx);
+        }
+        return result;
+    }
+
+    function getLatestValue(arr) {
+        for (let i = arr.length - 1; i >= 0; i--) {
+            if (arr[i] !== null) return arr[i];
+        }
+        return null;
+    }
+
+    function getPrevYearValue(arr) {
+        let count = 0;
+        for (let i = arr.length - 1; i >= 0; i--) {
+            if (arr[i] !== null) {
+                count++;
+                if (count > 12) return arr[i];
+            }
+        }
+        return null;
+    }
+
+    function renderSummaryCards() {
+        const container = document.getElementById('summary-cards');
+        
+        const cards = [
+            { key: '个人总收入/M2', label: '个人总收入/M2', desc: '收入相对货币供应', color: '#4169E1' },
+            { key: '可支配收入/M2', label: '可支配收入/M2', desc: '可支配收入相对M2', color: '#1a7f37' },
+            { key: '个人消费支出/M2', label: '消费支出/M2', desc: '消费相对货币供应', color: '#FF6600' },
+            { key: '消费信贷/M2', label: '消费信贷/M2', desc: '信贷占货币比例', color: '#8b5cf6' },
+            { key: '储蓄存款/M2', label: '储蓄/M2', desc: '储蓄占货币比例', color: '#0891b2' }
+        ];
+
+        container.innerHTML = cards.map(card => {
+            const arr = macroData.ratio_to_m2[card.key];
+            const latest = getLatestValue(arr);
+            const prev = getPrevYearValue(arr);
+            let changeHtml = '';
+            if (latest !== null && prev !== null) {
+                const change = ((latest - prev) / prev) * 100;
+                const changeClass = change >= 0 ? 'positive' : 'negative';
+                const sign = change >= 0 ? '+' : '';
+                changeHtml = `<div class="change ${changeClass}">YoY: ${sign}${change.toFixed(1)}%</div>`;
+            }
+            return `
+                <div class="summary-card" style="border-left-color: ${card.color}">
+                    <div class="label">${card.label}</div>
+                    <div class="value">${latest !== null ? latest.toFixed(3) : '-'}</div>
+                    <div class="desc">${card.desc}</div>
+                    ${changeHtml}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function createMainRatioChart() {
+        const ctx = document.getElementById('main-ratio-chart').getContext('2d');
+        const { startIdx } = getFilteredIndices();
+        const dates = macroData.dates.slice(startIdx);
+        const ratioData = getFilteredData(macroData.ratio_to_m2, startIdx);
+
+        const datasets = [
+            { label: '个人总收入/M2', data: ratioData['个人总收入/M2'], borderColor: colors['个人总收入/M2'], tension: 0.3, borderWidth: 2, pointRadius: 0 },
+            { label: '可支配收入/M2', data: ratioData['可支配收入/M2'], borderColor: colors['可支配收入/M2'], tension: 0.3, borderWidth: 2, pointRadius: 0 },
+            { label: '个人消费支出/M2', data: ratioData['个人消费支出/M2'], borderColor: colors['个人消费支出/M2'], tension: 0.3, borderWidth: 2, pointRadius: 0 }
+        ];
+
+        if (charts.mainRatio) charts.mainRatio.destroy();
+        
+        charts.mainRatio = new Chart(ctx, {
+            type: 'line',
+            data: { labels: dates, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toFixed(4) : '-'}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: v => v.toFixed(2), font: { size: 10 } },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { ticks: { maxTicksLimit: 12, font: { size: 10 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function createIncomeRatioChart() {
+        const ctx = document.getElementById('income-ratio-chart').getContext('2d');
+        const { startIdx } = getFilteredIndices();
+        const dates = macroData.dates.slice(startIdx);
+        const ratioData = getFilteredData(macroData.ratio_to_m2, startIdx);
+
+        if (charts.incomeRatio) charts.incomeRatio.destroy();
+
+        charts.incomeRatio = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    { label: '个人总收入/M2', data: ratioData['个人总收入/M2'], borderColor: '#4169E1', tension: 0.3, borderWidth: 2, pointRadius: 0 },
+                    { label: '可支配收入/M2', data: ratioData['可支配收入/M2'], borderColor: '#1a7f37', tension: 0.3, borderWidth: 2, pointRadius: 0 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } } },
+                scales: {
+                    y: { ticks: { callback: v => v.toFixed(2), font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function createCreditRatioChart() {
+        const ctx = document.getElementById('credit-ratio-chart').getContext('2d');
+        const { startIdx } = getFilteredIndices();
+        const dates = macroData.dates.slice(startIdx);
+        const ratioData = getFilteredData(macroData.ratio_to_m2, startIdx);
+
+        if (charts.creditRatio) charts.creditRatio.destroy();
+
+        charts.creditRatio = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: '消费信贷/M2',
+                    data: ratioData['消费信贷/M2'],
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { callback: v => v.toFixed(2), font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function createSavingsRatioChart() {
+        const ctx = document.getElementById('savings-ratio-chart').getContext('2d');
+        const { startIdx } = getFilteredIndices();
+        const dates = macroData.dates.slice(startIdx);
+        const ratioData = getFilteredData(macroData.ratio_to_m2, startIdx);
+
+        if (charts.savingsRatio) charts.savingsRatio.destroy();
+
+        charts.savingsRatio = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: '储蓄存款/M2',
+                    data: ratioData['储蓄存款/M2'],
+                    borderColor: '#0891b2',
+                    backgroundColor: 'rgba(8, 145, 178, 0.1)',
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { callback: v => v.toFixed(3), font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function createConsumptionRatioChart() {
+        const ctx = document.getElementById('consumption-ratio-chart').getContext('2d');
+        const { startIdx } = getFilteredIndices();
+        const dates = macroData.dates.slice(startIdx);
+        const ratioData = getFilteredData(macroData.ratio_to_m2, startIdx);
+
+        if (charts.consumptionRatio) charts.consumptionRatio.destroy();
+
+        charts.consumptionRatio = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: '个人消费支出/M2',
+                    data: ratioData['个人消费支出/M2'],
+                    borderColor: '#FF6600',
+                    backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                    tension: 0.3,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { callback: v => v.toFixed(2), font: { size: 9 } }, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { ticks: { maxTicksLimit: 8, font: { size: 9 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function createRawDataChart() {
+        const ctx = document.getElementById('raw-data-chart').getContext('2d');
+        const { startIdx } = getFilteredIndices();
+        const dates = macroData.dates.slice(startIdx);
+        const rawData = getFilteredData(macroData.raw, startIdx);
+
+        const datasets = Object.entries(rawColors).map(([key, color]) => ({
+            label: key,
+            data: rawData[key],
+            borderColor: color,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 0
+        }));
+
+        if (charts.rawData) charts.rawData.destroy();
+
+        charts.rawData = new Chart(ctx, {
+            type: 'line',
+            data: { labels: dates, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const v = ctx.parsed.y;
+                                if (v === null) return `${ctx.dataset.label}: -`;
+                                if (v >= 1000) return `${ctx.dataset.label}: ${(v/1000).toFixed(2)}T`;
+                                return `${ctx.dataset.label}: ${v.toFixed(1)}B`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(0) + 'T' : v.toFixed(0) + 'B', font: { size: 10 } },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { ticks: { maxTicksLimit: 12, font: { size: 10 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function updateCharts() {
+        renderSummaryCards();
+        createMainRatioChart();
+        createIncomeRatioChart();
+        createCreditRatioChart();
+        createSavingsRatioChart();
+        createConsumptionRatioChart();
+        createRawDataChart();
+    }
+
+    // Event Listeners
+    document.getElementById('time-range').addEventListener('change', (e) => {
+        currentRange = e.target.value;
+        updateCharts();
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        updateCharts();
+    });
+</script>
+
+</body>
+</html>

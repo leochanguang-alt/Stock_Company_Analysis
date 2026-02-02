@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>市场估值动态 | Market Valuation Dynamics</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --economist-red: #e3120b;
+            --bg-white: #ffffff;
+            --bg-gray: #f6f6f6;
+            --bg-dark: #1a1a2e;
+            --text-dark: #333333;
+            --text-muted: #666666;
+            --border-color: #dddddd;
+            --positive-green: #1a7f37;
+            --us-color: #4169E1;
+            --hk-color: #DC143C;
+            --cn-color: #FF6600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            background-color: var(--bg-white); 
+            color: var(--text-dark); 
+            line-height: 1.4;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-dark);
+            color: #fff;
+            padding: 0;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header h1 {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .sidebar-header span { color: var(--economist-red); }
+        .sidebar-nav { flex: 1; padding: 20px 0; }
+        .nav-item {
+            display: block;
+            padding: 15px 25px;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+        .nav-item.active { 
+            background: rgba(227,18,11,0.15); 
+            color: #fff; 
+            border-left-color: var(--economist-red);
+        }
+        .nav-item .icon { margin-right: 10px; }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+        }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .page-header {
+            border-bottom: 3px solid var(--economist-red);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+        .page-header h2 {
+            font-family: 'Lora', serif;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .page-header .subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        /* Charts Section */
+        .metric-row {
+            margin-bottom: 30px;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .metric-row h3 {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: var(--text-dark);
+            border-bottom: 2px solid var(--economist-red);
+            padding-bottom: 10px;
+        }
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .chart-card {
+            background: var(--bg-gray);
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .chart-card .market-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chart-card .market-label.us { color: var(--us-color); }
+        .chart-card .market-label.hk { color: var(--hk-color); }
+        .chart-card .market-label.cn { color: #FF6600; }
+        .chart-card .market-label .flag { font-size: 16px; }
+        .chart-container {
+            position: relative;
+            height: 160px;
+        }
+        .latest-value-single {
+            text-align: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border-color);
+        }
+        .latest-value-single .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .latest-value-single .value {
+            font-family: 'Lora', serif;
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .latest-value-single.us .value { color: var(--us-color); }
+        .latest-value-single.hk .value { color: var(--hk-color); }
+        .latest-value-single.cn .value { color: #FF6600; }
+
+        /* Market Summary */
+        .market-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            background: var(--bg-gray);
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .summary-item { text-align: center; }
+        .summary-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+        .summary-value { font-family: 'Lora', serif; font-size: 20px; font-weight: 700; margin-top: 5px; }
+        .summary-value.highlight { color: var(--economist-red); }
+
+        /* Tables */
+        .table-section { margin-bottom: 40px; }
+        .table-title {
+            font-family: 'Lora', serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .table-title span { font-size: 12px; font-weight: normal; color: var(--text-muted); }
+        .table-container { border: 1px solid var(--border-color); overflow: hidden; }
+        .scroll-area { max-height: 400px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { 
+            background: #eeeeee; 
+            text-align: right; 
+            padding: 10px 12px; 
+            border-bottom: 2px solid var(--border-color); 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            font-size: 10px; 
+            color: #555; 
+            position: sticky; 
+            top: 0; 
+            z-index: 5;
+            cursor: pointer;
+            user-select: none;
+        }
+        th:hover { background: #e0e0e0; }
+        th:first-child, td:first-child { text-align: left; }
+        th .sort-icon { margin-left: 5px; font-size: 10px; }
+        td { padding: 10px 12px; border-bottom: 1px solid var(--border-color); text-align: right; }
+        tr:hover { background-color: #f9f9f9; }
+        tr.clickable { cursor: pointer; }
+        tr.selected { background-color: #fff1f0; border-left: 4px solid var(--economist-red); }
+        .name-cell { text-align: left; font-weight: 700; }
+        .symbol-tag { background: #eee; padding: 2px 4px; border-radius: 2px; font-family: monospace; font-size: 10px; margin-right: 5px; color: var(--text-muted); }
+        .positive { color: var(--positive-green); font-weight: 700; }
+        .negative { color: var(--economist-red); font-weight: 700; }
+        .row-grey { color: #999 !important; }
+        .row-grey td { color: #999 !important; }
+
+        /* Drill-down sections */
+        .drill-section { display: none; margin-bottom: 30px; }
+        .drill-section.active { display: block; }
+
+        footer { 
+            padding: 20px; 
+            border-top: 1px solid rgba(255,255,255,0.1); 
+            font-size: 11px; 
+            color: rgba(255,255,255,0.5);
+            margin-top: auto;
+        }
+
+        /* Recommend Page Styles */
+        .recommend-criteria {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .criteria-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--bg-gray);
+            border: 2px solid;
+        }
+        .criteria-badge.green { border-color: var(--positive-green); color: var(--positive-green); }
+        .criteria-badge.blue { border-color: var(--us-color); color: var(--us-color); }
+        .criteria-badge.purple { border-color: #8b5cf6; color: #8b5cf6; }
+
+        .recommend-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .recommend-tabs {
+            display: flex;
+            gap: 10px;
+        }
+        .rec-tab {
+            padding: 10px 20px;
+            background: var(--bg-gray);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .rec-tab:hover {
+            background: #eee;
+        }
+        .rec-tab.active {
+            background: var(--economist-red);
+            color: #fff;
+            border-color: var(--economist-red);
+        }
+        .tab-count {
+            background: rgba(0,0,0,0.15);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+        .rec-tab.active .tab-count {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .recommend-filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            position: relative;
+        }
+        .filter-btn {
+            padding: 8px 14px;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-btn:hover {
+            border-color: var(--economist-red);
+        }
+        .filter-btn .arrow {
+            font-size: 10px;
+            color: #999;
+        }
+        .filter-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            min-width: 220px;
+            margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .filter-dropdown.show {
+            display: block;
+        }
+        .filter-option {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .filter-option:hover {
+            background: var(--bg-gray);
+        }
+        .filter-option.selected {
+            color: var(--economist-red);
+            background: #fff5f5;
+            font-weight: 500;
+        }
+        .clear-filters-btn {
+            padding: 8px 14px;
+            background: transparent;
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .clear-filters-btn:hover {
+            color: var(--economist-red);
+            border-color: var(--economist-red);
+        }
+        .filter-stats {
+            margin-left: auto;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+        .filter-stats span:first-child {
+            font-weight: 700;
+            color: var(--economist-red);
+        }
+
+        #recommend-table th {
+            background: #f5f5f5;
+            font-size: 11px;
+        }
+        #recommend-table th.sorted {
+            color: var(--economist-red);
+        }
+        #recommend-table .symbol-cell {
+            font-weight: 700;
+            color: var(--us-color);
+        }
+        .change-positive {
+            color: var(--positive-green);
+            font-weight: 500;
+        }
+        .change-negative {
+            color: var(--economist-red);
+            font-weight: 500;
+        }
+        .change-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        .change-badge.positive {
+            background: rgba(26, 127, 55, 0.1);
+        }
+        .change-badge.negative {
+            background: rgba(227, 18, 11, 0.1);
+        }
+
+        .date-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+        .date-selector label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .date-selector select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #fff;
+            cursor: pointer;
+            min-width: 140px;
+        }
+        .date-selector select:hover {
+            border-color: var(--economist-red);
+        }
+        .compare-label {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        .compare-label span {
+            font-weight: 600;
+            color: var(--us-color);
+        }
+        .criteria-badge.disabled {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        /* Finance Page Styles */
+        .finance-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .finance-controls label {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        .finance-controls select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            background: #fff;
+            cursor: pointer;
+        }
+        .finance-controls select:hover {
+            border-color: var(--economist-red);
+        }
+        .finance-summary {
+            background: var(--bg-gray);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .finance-summary h3 {
+            font-family: 'Lora', serif;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid var(--economist-red);
+            padding-bottom: 8px;
+        }
+        .finance-summary .subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .finance-chart-container {
+            position: relative;
+            height: 240px;
+        }
+        .finance-table th.sorted {
+            color: var(--economist-red);
+        }
+        .finance-industry-select {
+            position: relative;
+        }
+        .finance-industry-dropdown .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .finance-industry-dropdown input {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h1>市场估值<span>动态</span></h1>
+    </div>
+    <nav class="sidebar-nav">
+        <a class="nav-item active" data-page="overview">
+            <span class="icon">📊</span> 市场整体动态
+        </a>
+        <a class="nav-item" data-page="us">
+            <span class="icon">🇺🇸</span> US Market
+        </a>
+        <a class="nav-item" data-page="hk">
+            <span class="icon">🇭🇰</span> HK Market
+        </a>
+        <a class="nav-item" data-page="cn">
+            <span class="icon">🇨🇳</span> A股市场
+        </a>
+        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0;"></div>
+        <a class="nav-item" data-page="recommend">
+            <span class="icon">⭐</span> Recommend
+        </a>
+        <a class="nav-item" data-page="finance">
+            <span class="icon">🏦</span> 金融行业
+        </a>
+    </nav>
+    <footer>
+        <p>© 2026 Antigravity Analytics</p>
+    </footer>
+</aside>
+
+<main class="main-content">
+    <!-- Overview Page -->
+    <div id="page-overview" class="page active">
+        <div class="page-header">
+            <h2>市场整体动态</h2>
+            <p class="subtitle">Global Market Overview - Excluding Financial Sector</p>
+        </div>
+        <div id="overview-charts"></div>
+    </div>
+
+    <!-- US Market Page -->
+    <div id="page-us" class="page">
+        <div class="page-header">
+            <h2>US Market</h2>
+            <p class="subtitle" id="us-date">-</p>
+        </div>
+        <div class="market-summary" id="us-summary"></div>
+        <div class="table-section">
+            <div class="table-title">Sectors</div>
+            <div class="table-container"><div class="scroll-area"><table id="us-sector-table"></table></div></div>
+        </div>
+        <div class="drill-section" id="us-industry-section">
+            <div class="table-title">Industries <span id="us-selected-sector"></span></div>
+            <div class="table-container"><div class="scroll-area"><table id="us-industry-table"></table></div></div>
+        </div>
+        <div class="drill-section" id="us-company-section">
+            <div class="table-title">Companies <span id="us-selected-industry"></span></div>
+            <div class="table-container"><div class="scroll-area"><table id="us-company-table"></table></div></div>
+        </div>
+    </div>
+
+    <!-- HK Market Page -->
+    <div id="page-hk" class="page">
+        <div class="page-header">
+            <h2>HK Market</h2>
+            <p class="subtitle" id="hk-date">-</p>
+        </div>
+        <div class="market-summary" id="hk-summary"></div>
+        <div class="table-section">
+            <div class="table-title">Sectors</div>
+            <div class="table-container"><div class="scroll-area"><table id="hk-sector-table"></table></div></div>
+        </div>
+        <div class="drill-section" id="hk-industry-section">
+            <div class="table-title">Industries <span id="hk-selected-sector"></span></div>
+            <div class="table-container"><div class="scroll-area"><table id="hk-industry-table"></table></div></div>
+        </div>
+        <div class="drill-section" id="hk-company-section">
+            <div class="table-title">Companies <span id="hk-selected-industry"></span></div>
+            <div class="table-container"><div class="scroll-area"><table id="hk-company-table"></table></div></div>
+        </div>
+    </div>
+
+    <!-- CN Market Page -->
+    <div id="page-cn" class="page">
+        <div class="page-header">
+            <h2>A股市场</h2>
+            <p class="subtitle" id="cn-date">-</p>
+        </div>
+        <div class="market-summary" id="cn-summary"></div>
+        <div class="table-section">
+            <div class="table-title">Sectors</div>
+            <div class="table-container"><div class="scroll-area"><table id="cn-sector-table"></table></div></div>
+        </div>
+        <div class="drill-section" id="cn-industry-section">
+            <div class="table-title">Industries <span id="cn-selected-sector"></span></div>
+            <div class="table-container"><div class="scroll-area"><table id="cn-industry-table"></table></div></div>
+        </div>
+        <div class="drill-section" id="cn-company-section">
+            <div class="table-title">Companies <span id="cn-selected-industry"></span></div>
+            <div class="table-container"><div class="scroll-area"><table id="cn-company-table"></table></div></div>
+        </div>
+    </div>
+
+    <!-- Recommend Page -->
+    <div id="page-recommend" class="page">
+        <div class="page-header">
+            <h2>基本面推荐股票</h2>
+            <p class="subtitle">Fundamental-based Stock Recommendations</p>
+        </div>
+        
+        <!-- Criteria Badges -->
+        <div class="recommend-criteria">
+            <span class="criteria-badge green">OCF/Assets &gt; 10%</span>
+            <span class="criteria-badge blue">GAP &lt; 0.8</span>
+            <span class="criteria-badge purple" id="ema-badge">EMA &gt; SMA</span>
+        </div>
+        
+        <!-- Market Tabs and Date Selector -->
+        <div class="recommend-controls">
+            <div class="recommend-tabs">
+                <button class="rec-tab active" data-rec-market="us">🇺🇸 US Market <span class="tab-count" id="rec-us-count">0</span></button>
+                <button class="rec-tab" data-rec-market="hk">🇭🇰 HK Market <span class="tab-count" id="rec-hk-count">0</span></button>
+                <button class="rec-tab" data-rec-market="cn">🇨🇳 A股市场 <span class="tab-count" id="rec-cn-count">0</span></button>
+            </div>
+            <div class="date-selector">
+                <label for="rec-date-select">📅 估值日期:</label>
+                <select id="rec-date-select"></select>
+                <span class="compare-label">→ 比较: <span id="rec-compare-date">-</span></span>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <div class="recommend-filters">
+            <div class="filter-group">
+                <button class="filter-btn" id="rec-sector-filter">
+                    <span>Sector: All</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <div class="filter-dropdown" id="rec-sector-dropdown"></div>
+            </div>
+            <div class="filter-group">
+                <button class="filter-btn" id="rec-industry-filter">
+                    <span>Industry: All</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <div class="filter-dropdown" id="rec-industry-dropdown"></div>
+            </div>
+            <button class="clear-filters-btn" id="rec-clear-filters">清除筛选</button>
+            <div class="filter-stats">
+                <span id="rec-filtered-count">0</span> / <span id="rec-total-count">0</span> 符合条件
+            </div>
+        </div>
+        
+        <!-- Recommend Table -->
+        <div class="table-container">
+            <div class="scroll-area" style="max-height: 600px;">
+                <table id="recommend-table">
+                    <thead>
+                        <tr>
+                            <th data-col="symbol" onclick="sortRecTable('symbol')">Symbol <span class="sort-icon">⇅</span></th>
+                            <th data-col="description" onclick="sortRecTable('description')">Name <span class="sort-icon">⇅</span></th>
+                            <th data-col="sector" onclick="sortRecTable('sector')">Sector <span class="sort-icon">⇅</span></th>
+                            <th data-col="industry" onclick="sortRecTable('industry')">Industry <span class="sort-icon">⇅</span></th>
+                            <th data-col="mkt_cap" onclick="sortRecTable('mkt_cap')">Mkt Cap <span class="sort-icon">⇅</span></th>
+                            <th data-col="ev" onclick="sortRecTable('ev')">EV <span class="sort-icon">⇅</span></th>
+                            <th data-col="equity" onclick="sortRecTable('equity')">Equity <span class="sort-icon">⇅</span></th>
+                            <th data-col="debt" onclick="sortRecTable('debt')">Debt <span class="sort-icon">⇅</span></th>
+                            <th data-col="ocf_assets" onclick="sortRecTable('ocf_assets')">OCF/Assets <span class="sort-icon">⇅</span></th>
+                            <th data-col="ocf_ev" onclick="sortRecTable('ocf_ev')">OCF/EV <span class="sort-icon">⇅</span></th>
+                            <th data-col="gap" onclick="sortRecTable('gap')">GAP <span class="sort-icon">⇅</span></th>
+                            <th data-col="mkt_cap_change_pct" onclick="sortRecTable('mkt_cap_change_pct')">Mkt Cap Δ <span class="sort-icon">⇅</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="recommend-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finance Page -->
+    <div id="page-finance" class="page">
+        <div class="page-header">
+            <h2>金融行业数据</h2>
+            <p class="subtitle">Financial Sector Overview</p>
+        </div>
+
+        <div class="finance-controls">
+            <div>
+                <label for="finance-date-select">📅 日期</label>
+                <select id="finance-date-select"></select>
+            </div>
+            <div>
+                <label for="finance-market-select">🌍 市场</label>
+                <select id="finance-market-select">
+                    <option value="us">US Market</option>
+                    <option value="hk">HK Market</option>
+                    <option value="cn">A股市场</option>
+                </select>
+            </div>
+            <div class="filter-group finance-industry-select">
+                <button class="filter-btn" id="finance-industry-filter">
+                    <span>Industry: All</span>
+                    <span class="arrow">▼</span>
+                </button>
+                <div class="filter-dropdown finance-industry-dropdown" id="finance-industry-dropdown"></div>
+            </div>
+        </div>
+
+        <div class="finance-summary">
+            <h3>行业增速（过去12个月）</h3>
+            <div class="subtitle" id="finance-summary-subtitle">-</div>
+            <div class="market-summary" id="finance-summary-totals"></div>
+            <div class="finance-chart-container">
+                <canvas id="finance-summary-chart"></canvas>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="scroll-area" style="max-height: 600px;">
+                <table id="finance-table" class="finance-table">
+                    <thead>
+                        <tr>
+                            <th data-col="symbol" onclick="sortFinanceTable('symbol')">Symbol <span class="sort-icon">⇅</span></th>
+                            <th data-col="industry" onclick="sortFinanceTable('industry')">Industry <span class="sort-icon">⇅</span></th>
+                            <th data-col="assets" onclick="sortFinanceTable('assets')">Assets <span class="sort-icon">⇅</span></th>
+                            <th data-col="debts" onclick="sortFinanceTable('debts')">Debt <span class="sort-icon">⇅</span></th>
+                            <th data-col="ocf" onclick="sortFinanceTable('ocf')">OCF <span class="sort-icon">⇅</span></th>
+                            <th data-col="equity" onclick="sortFinanceTable('equity')">Equity <span class="sort-icon">⇅</span></th>
+                            <th data-col="mkt_equity" onclick="sortFinanceTable('mkt_equity')">Mkt/Equity <span class="sort-icon">⇅</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="finance-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="market_dynamics_data.js"></script>
+<script src="recommend_data.js"></script>
+<script>
+    // State
+    const state = {
+        currentPage: 'overview',
+        sortConfig: {},
+        selectedSector: { us: null, hk: null, cn: null },
+        selectedIndustry: { us: null, hk: null, cn: null }
+    };
+
+    // Formatters
+    function fL(n) {
+        if (n === null || n === undefined || isNaN(n)) return '-';
+        if (n === 0) return '0';
+        const absN = Math.abs(n);
+        if (absN >= 1e12) return (n / 1e12).toFixed(2) + 'T';
+        if (absN >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+        if (absN >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+        if (absN >= 1e3) return (n / 1e3).toFixed(2) + 'K';
+        return n.toFixed(2);
+    }
+    function fP(n) {
+        if (n === null || n === undefined || isNaN(n)) return '-';
+        if (n > 1) return '>100%';
+        return (n * 100).toFixed(1) + '%';
+    }
+    function fN(n, d=2) {
+        if (n === null || n === undefined || isNaN(n)) return '-';
+        return n.toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d});
+    }
+
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const page = item.dataset.page;
+            state.currentPage = page;
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            item.classList.add('active');
+            document.getElementById('page-' + page).classList.add('active');
+        });
+    });
+
+    // Charts
+    const chartInstances = {};
+    const metrics = [
+        { key: 'total_ocf', label: 'Total Op Cash Flow' },
+        { key: 'total_assets', label: 'Total Assets' },
+        { key: 'total_ev', label: 'Total Enterprise Value' },
+        { key: 'total_debt', label: 'Total Debt' },
+        { key: 'total_mcap', label: 'Total Mkt Cap' },
+        { key: 'ocf_assets', label: 'OpCF / Assets', isPercent: true },
+        { key: 'ocf_ev', label: 'OpCF / EV', isPercent: true }
+    ];
+
+    const marketConfig = {
+        us: { label: 'US Market', flag: '🇺🇸', color: '#4169E1', bgColor: 'rgba(65,105,225,0.15)' },
+        hk: { label: 'HK Market', flag: '🇭🇰', color: '#DC143C', bgColor: 'rgba(220,20,60,0.15)' },
+        cn: { label: 'A股市场', flag: '🇨🇳', color: '#FF6600', bgColor: 'rgba(255,102,0,0.15)' }
+    };
+
+    function formatDateLabel(dateStr) {
+        const d = new Date(dateStr);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return months[d.getMonth()] + '/' + String(d.getFullYear()).slice(2);
+    }
+
+    function renderOverviewCharts() {
+        const container = document.getElementById('overview-charts');
+        container.innerHTML = '';
+        
+        // Get dates for each market separately
+        const marketDates = {
+            us: Object.keys(rawData.time_series.us || {}).sort(),
+            hk: Object.keys(rawData.time_series.hk || {}).sort(),
+            cn: Object.keys(rawData.time_series.cn || {}).sort()
+        };
+
+        metrics.forEach(metric => {
+            const row = document.createElement('div');
+            row.className = 'metric-row';
+            row.innerHTML = `
+                <h3>${metric.label}</h3>
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <div class="market-label us"><span class="flag">🇺🇸</span> US Market</div>
+                        <div class="chart-container"><canvas id="chart-us-${metric.key}"></canvas></div>
+                        <div class="latest-value-single us"><div class="label">Latest</div><div class="value" id="latest-us-${metric.key}">-</div></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="market-label hk"><span class="flag">🇭🇰</span> HK Market</div>
+                        <div class="chart-container"><canvas id="chart-hk-${metric.key}"></canvas></div>
+                        <div class="latest-value-single hk"><div class="label">Latest</div><div class="value" id="latest-hk-${metric.key}">-</div></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="market-label cn"><span class="flag">🇨🇳</span> A股市场</div>
+                        <div class="chart-container"><canvas id="chart-cn-${metric.key}"></canvas></div>
+                        <div class="latest-value-single cn"><div class="label">Latest</div><div class="value" id="latest-cn-${metric.key}">-</div></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(row);
+
+            // Create chart for each market
+            ['us', 'hk', 'cn'].forEach(market => {
+                const dates = marketDates[market];
+                const data = dates.map(d => rawData.time_series[market][d]?.[metric.key] ?? null);
+                const labels = dates.map(formatDateLabel);
+                
+                // Update latest value
+                const latestVal = data.filter(v => v !== null).pop();
+                document.getElementById(`latest-${market}-${metric.key}`).textContent = metric.isPercent ? fP(latestVal) : fL(latestVal);
+
+                // Create chart
+                const ctx = document.getElementById(`chart-${market}-${metric.key}`).getContext('2d');
+                const config = marketConfig[market];
+                
+                chartInstances[`${market}-${metric.key}`] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: config.label,
+                            data: data,
+                            borderColor: config.color,
+                            backgroundColor: config.bgColor,
+                            tension: 0.3,
+                            pointRadius: 5,
+                            pointHoverRadius: 8,
+                            borderWidth: 3,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: { 
+                                ticks: { 
+                                    callback: v => metric.isPercent ? (v*100).toFixed(1)+'%' : fL(v),
+                                    font: { size: 10 }
+                                },
+                                grid: { color: 'rgba(0,0,0,0.05)' }
+                            },
+                            x: { 
+                                ticks: { font: { size: 10 } },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            });
+        });
+    }
+
+    // Market Summary Render
+    function renderMarketSummary(market) {
+        const data = rawData.markets[market];
+        if (!data) return;
+        
+        document.getElementById(`${market}-date`).textContent = `Data as of ${data.date}`;
+        const summary = data.summary;
+        const container = document.getElementById(`${market}-summary`);
+        container.innerHTML = `
+            <div class="summary-item"><div class="summary-label">Total OCF</div><div class="summary-value">${fL(summary.total_ocf)}</div></div>
+            <div class="summary-item"><div class="summary-label">Total Assets</div><div class="summary-value">${fL(summary.total_assets)}</div></div>
+            <div class="summary-item"><div class="summary-label">Total EV</div><div class="summary-value">${fL(summary.total_ev)}</div></div>
+            <div class="summary-item"><div class="summary-label">Total Debt</div><div class="summary-value">${fL(summary.total_debt)}</div></div>
+            <div class="summary-item"><div class="summary-label">Total MCap</div><div class="summary-value">${fL(summary.total_mcap)}</div></div>
+            <div class="summary-item"><div class="summary-label">OCF/Assets</div><div class="summary-value highlight">${fP(summary.ocf_assets)}</div></div>
+            <div class="summary-item"><div class="summary-label">OCF/EV</div><div class="summary-value highlight">${fP(summary.ocf_ev)}</div></div>
+        `;
+    }
+
+    // Table Rendering with Sorting
+    function getTableHeaders(tableId) {
+        return `<thead><tr>
+            <th data-col="name" onclick="sortTable('${tableId}', 'name')">名称 <span class="sort-icon"></span></th>
+            <th data-col="ocf" onclick="sortTable('${tableId}', 'ocf')">OCF <span class="sort-icon"></span></th>
+            <th data-col="assets" onclick="sortTable('${tableId}', 'assets')">Assets <span class="sort-icon"></span></th>
+            <th data-col="debts" onclick="sortTable('${tableId}', 'debts')">Debts <span class="sort-icon"></span></th>
+            <th data-col="ev" onclick="sortTable('${tableId}', 'ev')">EV <span class="sort-icon"></span></th>
+            <th data-col="ocf_assets" onclick="sortTable('${tableId}', 'ocf_assets')">OCF/Assets <span class="sort-icon"></span></th>
+            <th data-col="ocf_ev" onclick="sortTable('${tableId}', 'ocf_ev')">OCF/EV <span class="sort-icon"></span></th>
+            <th data-col="multiplier" onclick="sortTable('${tableId}', 'multiplier')">Multiplier <span class="sort-icon"></span></th>
+            <th data-col="gap" onclick="sortTable('${tableId}', 'gap')">Gap <span class="sort-icon"></span></th>
+        </tr></thead>`;
+    }
+
+    function sortTable(tableId, col) {
+        const config = state.sortConfig[tableId] || { col: null, asc: true };
+        if (config.col === col) {
+            config.asc = !config.asc;
+        } else {
+            config.col = col;
+            config.asc = true;
+        }
+        state.sortConfig[tableId] = config;
+        
+        // Re-render based on table type
+        const [market, type] = tableId.split('-');
+        if (type === 'sector') renderSectorTable(market);
+        else if (type === 'industry') renderIndustryTable(market);
+        else if (type === 'company') renderCompanyTable(market);
+    }
+
+    function sortData(data, tableId) {
+        const config = state.sortConfig[tableId];
+        if (!config || !config.col) return data;
+        
+        return [...data].sort((a, b) => {
+            let valA = config.col === 'name' ? (a.name || a.symbol || '') : a[config.col];
+            let valB = config.col === 'name' ? (b.name || b.symbol || '') : b[config.col];
+            
+            if (valA === null || valA === undefined) valA = config.asc ? Infinity : -Infinity;
+            if (valB === null || valB === undefined) valB = config.asc ? Infinity : -Infinity;
+            
+            if (typeof valA === 'string') return config.asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            return config.asc ? valA - valB : valB - valA;
+        });
+    }
+
+    function renderSectorTable(market) {
+        const tableId = `${market}-sector`;
+        const data = rawData.markets[market]?.sectors || [];
+        const sorted = sortData(data, tableId + '-table');
+        const table = document.getElementById(tableId + '-table');
+        
+        let html = getTableHeaders(tableId + '-table') + '<tbody>';
+        sorted.forEach(item => {
+            const isNeg = item.ocf < 0;
+            const rowClass = isNeg ? 'row-grey' : 'clickable';
+            html += `<tr class="${rowClass}" onclick="${isNeg ? '' : `selectSector('${market}', '${item.name.replace(/'/g, "\\'")}')` }">
+                <td class="name-cell">${item.name}</td>
+                <td>${fL(item.ocf)}</td>
+                <td>${fL(item.assets)}</td>
+                <td>${fL(item.debts)}</td>
+                <td>${fL(item.ev)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.ocf_assets)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.ocf_ev)}</td>
+                <td>${isNeg ? 'n/a' : fN(item.multiplier, 1) + 'x'}</td>
+                <td class="${isNeg ? '' : (item.gap < 1 ? 'positive' : 'negative')}">${isNeg ? 'n/a' : fN(item.gap)}</td>
+            </tr>`;
+        });
+        html += '</tbody>';
+        table.innerHTML = html;
+    }
+
+    function renderIndustryTable(market) {
+        const tableId = `${market}-industry`;
+        const sector = state.selectedSector[market];
+        if (!sector) return;
+        
+        const data = (rawData.markets[market]?.industries || []).filter(i => i.sector === sector);
+        const sorted = sortData(data, tableId + '-table');
+        const table = document.getElementById(tableId + '-table');
+        
+        let html = getTableHeaders(tableId + '-table') + '<tbody>';
+        sorted.forEach(item => {
+            const isNeg = item.ocf < 0;
+            const rowClass = isNeg ? 'row-grey' : 'clickable';
+            html += `<tr class="${rowClass}" onclick="${isNeg ? '' : `selectIndustry('${market}', '${item.name.replace(/'/g, "\\'")}')` }">
+                <td class="name-cell">${item.name}</td>
+                <td>${fL(item.ocf)}</td>
+                <td>${fL(item.assets)}</td>
+                <td>${fL(item.debts)}</td>
+                <td>${fL(item.ev)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.ocf_assets)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.ocf_ev)}</td>
+                <td>${isNeg ? 'n/a' : fN(item.multiplier, 1) + 'x'}</td>
+                <td class="${isNeg ? '' : (item.gap < 1 ? 'positive' : 'negative')}">${isNeg ? 'n/a' : fN(item.gap)}</td>
+            </tr>`;
+        });
+        html += '</tbody>';
+        table.innerHTML = html;
+    }
+
+    function renderCompanyTable(market) {
+        const tableId = `${market}-company`;
+        const sector = state.selectedSector[market];
+        const industry = state.selectedIndustry[market];
+        if (!sector || !industry) return;
+        
+        const data = (rawData.markets[market]?.companies || []).filter(c => c.sector === sector && c.industry === industry);
+        const sorted = sortData(data, tableId + '-table');
+        const table = document.getElementById(tableId + '-table');
+        
+        let html = getTableHeaders(tableId + '-table').replace('名称', '代码/名称') + '<tbody>';
+        sorted.forEach(item => {
+            const isNeg = item.ocf < 0;
+            const rowClass = isNeg ? 'row-grey' : '';
+            html += `<tr class="${rowClass}">
+                <td class="name-cell"><span class="symbol-tag">${item.symbol}</span>${item.description}</td>
+                <td>${fL(item.ocf)}</td>
+                <td>${fL(item.assets)}</td>
+                <td>${fL(item.debts)}</td>
+                <td>${fL(item.ev)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.ocf_assets)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.ocf_ev)}</td>
+                <td>${isNeg ? 'n/a' : fN(item.multiplier, 1) + 'x'}</td>
+                <td class="${isNeg ? '' : (item.gap < 1 ? 'positive' : 'negative')}">${isNeg ? 'n/a' : fN(item.gap)}</td>
+            </tr>`;
+        });
+        html += '</tbody>';
+        table.innerHTML = html;
+    }
+
+    // Selection handlers
+    function selectSector(market, name) {
+        state.selectedSector[market] = name;
+        state.selectedIndustry[market] = null;
+        document.getElementById(`${market}-selected-sector`).textContent = '| ' + name;
+        document.getElementById(`${market}-industry-section`).classList.add('active');
+        document.getElementById(`${market}-company-section`).classList.remove('active');
+        renderIndustryTable(market);
+    }
+
+    function selectIndustry(market, name) {
+        state.selectedIndustry[market] = name;
+        document.getElementById(`${market}-selected-industry`).textContent = '| ' + name;
+        document.getElementById(`${market}-company-section`).classList.add('active');
+        renderCompanyTable(market);
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        renderOverviewCharts();
+        ['us', 'hk', 'cn'].forEach(market => {
+            renderMarketSummary(market);
+            renderSectorTable(market);
+        });
+        // Initialize Recommend page
+        initRecommendPage();
+        // Initialize Finance page
+        initFinancePage();
+    });
+
+    // ========== RECOMMEND PAGE LOGIC ==========
+    const recState = {
+        currentMarket: 'us',
+        currentDate: null,
+        sector: null,
+        industry: null,
+        sortCol: 'mkt_cap',
+        sortAsc: false
+    };
+
+    function initRecommendPage() {
+        if (typeof recommendData === 'undefined') return;
+        
+        // Tab click handlers
+        document.querySelectorAll('.rec-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.rec-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                recState.currentMarket = tab.dataset.recMarket;
+                recState.sector = null;
+                recState.industry = null;
+                recState.currentDate = null; // Reset date on market change
+                updateDateSelector();
+                renderRecommendPage();
+            });
+        });
+        
+        // Date selector
+        document.getElementById('rec-date-select').addEventListener('change', (e) => {
+            recState.currentDate = e.target.value;
+            recState.sector = null;
+            recState.industry = null;
+            renderRecommendPage();
+        });
+        
+        // Filter dropdowns
+        const sectorBtn = document.getElementById('rec-sector-filter');
+        const industryBtn = document.getElementById('rec-industry-filter');
+        const sectorDropdown = document.getElementById('rec-sector-dropdown');
+        const industryDropdown = document.getElementById('rec-industry-dropdown');
+        
+        sectorBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sectorDropdown.classList.toggle('show');
+            industryDropdown.classList.remove('show');
+        });
+        
+        industryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            industryDropdown.classList.toggle('show');
+            sectorDropdown.classList.remove('show');
+        });
+        
+        sectorDropdown.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-option')) {
+                recState.sector = e.target.dataset.value || null;
+                recState.industry = null;
+                sectorDropdown.classList.remove('show');
+                renderRecommendPage();
+            }
+        });
+        
+        industryDropdown.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-option')) {
+                recState.industry = e.target.dataset.value || null;
+                industryDropdown.classList.remove('show');
+                renderRecommendPage();
+            }
+        });
+        
+        document.getElementById('rec-clear-filters').addEventListener('click', () => {
+            recState.sector = null;
+            recState.industry = null;
+            renderRecommendPage();
+        });
+        
+        document.addEventListener('click', () => {
+            sectorDropdown.classList.remove('show');
+            industryDropdown.classList.remove('show');
+        });
+        
+        updateDateSelector();
+        renderRecommendPage();
+    }
+
+    function updateDateSelector() {
+        const marketData = recommendData.recommendations[recState.currentMarket];
+        if (!marketData) return;
+        
+        const select = document.getElementById('rec-date-select');
+        const dates = marketData.dates || [];
+        
+        // Default to first date if not set
+        if (!recState.currentDate && dates.length > 0) {
+            recState.currentDate = dates[0].value;
+        }
+        
+        select.innerHTML = dates.map(d => 
+            `<option value="${d.value}" ${recState.currentDate === d.value ? 'selected' : ''}>${d.label}</option>`
+        ).join('');
+        
+        // Update tab counts based on selected date
+        ['us', 'hk', 'cn'].forEach(m => {
+            const mData = recommendData.recommendations[m];
+            if (mData && mData.dates && mData.dates.length > 0) {
+                // Use the first date's count for initial display
+                const firstDate = mData.dates[0]?.value;
+                const dateData = mData.by_date[firstDate];
+                const count = dateData?.filtered_count || 0;
+                document.getElementById(`rec-${m}-count`).textContent = count;
+            }
+        });
+    }
+
+    function getCurrentDateData() {
+        const marketData = recommendData.recommendations[recState.currentMarket];
+        if (!marketData) return null;
+        return marketData.by_date[recState.currentDate] || null;
+    }
+
+    function getRecFilteredStocks() {
+        const dateData = getCurrentDateData();
+        if (!dateData) return [];
+        
+        let stocks = [...dateData.stocks];
+        
+        if (recState.sector) {
+            stocks = stocks.filter(s => s.sector === recState.sector);
+        }
+        if (recState.industry) {
+            stocks = stocks.filter(s => s.industry === recState.industry);
+        }
+        
+        // Sort
+        stocks.sort((a, b) => {
+            let va = a[recState.sortCol];
+            let vb = b[recState.sortCol];
+            
+            if (va === null) va = recState.sortAsc ? Infinity : -Infinity;
+            if (vb === null) vb = recState.sortAsc ? Infinity : -Infinity;
+            
+            if (typeof va === 'string') {
+                return recState.sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            }
+            return recState.sortAsc ? va - vb : vb - va;
+        });
+        
+        return stocks;
+    }
+
+    function renderRecommendPage() {
+        const dateData = getCurrentDateData();
+        if (!dateData) return;
+        
+        const stocks = getRecFilteredStocks();
+        
+        // Update counts
+        document.getElementById('rec-filtered-count').textContent = stocks.length;
+        document.getElementById('rec-total-count').textContent = dateData.total_stocks;
+        
+        // Update compare date label
+        const compareLabel = document.getElementById('rec-compare-date');
+        compareLabel.textContent = dateData.next_date_label || '无';
+        
+        // Update EMA badge (show strikethrough if no EMA data)
+        const emaBadge = document.getElementById('ema-badge');
+        if (dateData.has_ema_data) {
+            emaBadge.classList.remove('disabled');
+            emaBadge.title = '';
+        } else {
+            emaBadge.classList.add('disabled');
+            emaBadge.title = '该日期无 EMA/SMA 数据，跳过此条件';
+        }
+        
+        // Update tab count for current market
+        document.getElementById(`rec-${recState.currentMarket}-count`).textContent = dateData.filtered_count;
+        
+        // Update filter dropdowns
+        let industries = recState.sector 
+            ? [...new Set(dateData.stocks.filter(s => s.sector === recState.sector).map(s => s.industry))].sort()
+            : dateData.industries;
+        
+        document.getElementById('rec-sector-dropdown').innerHTML = `
+            <div class="filter-option ${!recState.sector ? 'selected' : ''}" data-value="">All Sectors</div>
+            ${dateData.sectors.map(s => `
+                <div class="filter-option ${recState.sector === s ? 'selected' : ''}" data-value="${s}">${s}</div>
+            `).join('')}
+        `;
+        
+        document.getElementById('rec-industry-dropdown').innerHTML = `
+            <div class="filter-option ${!recState.industry ? 'selected' : ''}" data-value="">All Industries</div>
+            ${industries.map(i => `
+                <div class="filter-option ${recState.industry === i ? 'selected' : ''}" data-value="${i}">${i}</div>
+            `).join('')}
+        `;
+        
+        // Update button text
+        document.getElementById('rec-sector-filter').querySelector('span').textContent = 
+            recState.sector ? `Sector: ${recState.sector}` : 'Sector: All';
+        document.getElementById('rec-industry-filter').querySelector('span').textContent = 
+            recState.industry ? `Industry: ${recState.industry.slice(0, 15)}...` : 'Industry: All';
+        
+        // Update sort indicators
+        document.querySelectorAll('#recommend-table th').forEach(th => {
+            th.classList.remove('sorted');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) icon.textContent = '⇅';
+        });
+        const activeHeader = document.querySelector(`#recommend-table th[data-col="${recState.sortCol}"]`);
+        if (activeHeader) {
+            activeHeader.classList.add('sorted');
+            activeHeader.querySelector('.sort-icon').textContent = recState.sortAsc ? '↑' : '↓';
+        }
+        
+        // Render table
+        const tbody = document.getElementById('recommend-tbody');
+        if (stocks.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding: 40px; color: #999;">没有符合条件的股票</td></tr>`;
+            return;
+        }
+        
+        tbody.innerHTML = stocks.map(s => {
+            const changeClass = s.mkt_cap_change_pct > 0 ? 'positive' : s.mkt_cap_change_pct < 0 ? 'negative' : '';
+            const changePct = s.mkt_cap_change_pct !== null 
+                ? `<span class="change-badge ${changeClass}">${s.mkt_cap_change_pct > 0 ? '+' : ''}${s.mkt_cap_change_pct.toFixed(1)}%</span>`
+                : '-';
+            
+            return `<tr>
+                <td class="symbol-cell">${s.symbol}</td>
+                <td title="${s.description}">${s.description.length > 30 ? s.description.slice(0, 30) + '...' : s.description}</td>
+                <td>${s.sector}</td>
+                <td title="${s.industry}">${s.industry.length > 20 ? s.industry.slice(0, 20) + '...' : s.industry}</td>
+                <td>${s.mkt_cap_fmt || '-'}</td>
+                <td>${s.ev_fmt || '-'}</td>
+                <td>${s.equity_fmt || '-'}</td>
+                <td>${s.debt_fmt || '-'}</td>
+                <td class="${s.ocf_assets > 0.2 ? 'positive' : ''}">${fP(s.ocf_assets)}</td>
+                <td class="${s.ocf_ev > 0.2 ? 'positive' : ''}">${fP(s.ocf_ev)}</td>
+                <td class="${s.gap < 0.5 ? 'positive' : ''}">${s.gap !== null ? s.gap.toFixed(3) : '-'}</td>
+                <td>${changePct}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function sortRecTable(col) {
+        if (recState.sortCol === col) {
+            recState.sortAsc = !recState.sortAsc;
+        } else {
+            recState.sortCol = col;
+            recState.sortAsc = false;
+        }
+        renderRecommendPage();
+    }
+
+    // ========== FINANCE PAGE LOGIC ==========
+    const financeState = {
+        currentMarket: 'us',
+        currentDate: null,
+        selectedIndustries: new Set(),
+        sortCol: 'assets',
+        sortAsc: false,
+        chart: null
+    };
+
+    function fPct(n) {
+        if (n === null || n === undefined || isNaN(n)) return '-';
+        const sign = n > 0 ? '+' : '';
+        return sign + (n * 100).toFixed(1) + '%';
+    }
+
+    function getFinanceMarketData() {
+        if (!rawData.finance_data) return null;
+        return rawData.finance_data[financeState.currentMarket] || null;
+    }
+
+    function initFinancePage() {
+        if (!rawData.finance_data) return;
+
+        const marketSelect = document.getElementById('finance-market-select');
+        const dateSelect = document.getElementById('finance-date-select');
+        const industryBtn = document.getElementById('finance-industry-filter');
+        const industryDropdown = document.getElementById('finance-industry-dropdown');
+
+        marketSelect.addEventListener('change', (e) => {
+            financeState.currentMarket = e.target.value;
+            financeState.currentDate = null;
+            financeState.selectedIndustries = new Set();
+            updateFinanceSelectors();
+            renderFinancePage();
+        });
+
+        dateSelect.addEventListener('change', (e) => {
+            financeState.currentDate = e.target.value;
+            renderFinancePage();
+        });
+
+        industryBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            industryDropdown.classList.toggle('show');
+        });
+
+        industryDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        industryDropdown.addEventListener('change', (e) => {
+            if (e.target && e.target.dataset && e.target.dataset.value !== undefined) {
+                const value = e.target.dataset.value;
+                if (e.target.checked) {
+                    financeState.selectedIndustries.add(value);
+                } else {
+                    financeState.selectedIndustries.delete(value);
+                }
+                renderFinancePage();
+            }
+        });
+
+        document.addEventListener('click', () => {
+            industryDropdown.classList.remove('show');
+        });
+
+        updateFinanceSelectors();
+        renderFinancePage();
+    }
+
+    function updateFinanceSelectors() {
+        const marketData = getFinanceMarketData();
+        if (!marketData) return;
+
+        const dateSelect = document.getElementById('finance-date-select');
+        const dates = marketData.dates || [];
+        if (!financeState.currentDate && dates.length > 0) {
+            financeState.currentDate = dates[dates.length - 1];
+        }
+        dateSelect.innerHTML = dates.map(d => `
+            <option value="${d}" ${financeState.currentDate === d ? 'selected' : ''}>${d}</option>
+        `).join('');
+
+        const industries = marketData.industries || [];
+        const dropdown = document.getElementById('finance-industry-dropdown');
+        dropdown.innerHTML = industries.map(ind => `
+            <label class="filter-option">
+                <input type="checkbox" data-value="${ind}" ${financeState.selectedIndustries.has(ind) ? 'checked' : ''}/>
+                <span>${ind}</span>
+            </label>
+        `).join('');
+
+        const btnText = financeState.selectedIndustries.size
+            ? `Industry: ${financeState.selectedIndustries.size} selected`
+            : 'Industry: All';
+        document.getElementById('finance-industry-filter').querySelector('span').textContent = btnText;
+    }
+
+    function getFinanceDateData() {
+        const marketData = getFinanceMarketData();
+        if (!marketData) return null;
+        return marketData.by_date[financeState.currentDate] || null;
+    }
+
+    function getSelectedIndustries(summary) {
+        if (!summary) return [];
+        if (financeState.selectedIndustries.size === 0) {
+            return Object.keys(summary);
+        }
+        return Array.from(financeState.selectedIndustries);
+    }
+
+    function buildFinanceSeries() {
+        const marketData = getFinanceMarketData();
+        if (!marketData) return null;
+        const dates = marketData.dates || [];
+        const tailDates = dates.slice(-12);
+        const series = {
+            labels: tailDates,
+            assets: [],
+            debts: [],
+            ocf: [],
+            equity: []
+        };
+        let base = null;
+
+        tailDates.forEach((date, idx) => {
+            const summary = marketData.by_date[date]?.industry_summary || {};
+            const industries = getSelectedIndustries(summary);
+            let assets = 0;
+            let debts = 0;
+            let ocf = 0;
+            let equity = 0;
+            industries.forEach(ind => {
+                const s = summary[ind];
+                if (!s) return;
+                assets += s.assets || 0;
+                debts += s.debts || 0;
+                ocf += s.ocf || 0;
+                equity += s.equity || 0;
+            });
+
+            if (idx === 0) {
+                base = { assets, debts, ocf, equity };
+            }
+            const baseAssets = base?.assets || 0;
+            const baseDebts = base?.debts || 0;
+            const baseOcf = base?.ocf || 0;
+            const baseEquity = base?.equity || 0;
+
+            series.assets.push(baseAssets ? (assets - baseAssets) / Math.abs(baseAssets) : null);
+            series.debts.push(baseDebts ? (debts - baseDebts) / Math.abs(baseDebts) : null);
+            series.ocf.push(baseOcf ? (ocf - baseOcf) / Math.abs(baseOcf) : null);
+            series.equity.push(baseEquity ? (equity - baseEquity) / Math.abs(baseEquity) : null);
+        });
+
+        return series;
+    }
+
+    function renderFinanceChart() {
+        const series = buildFinanceSeries();
+        if (!series) return;
+
+        const subtitle = document.getElementById('finance-summary-subtitle');
+        const industriesText = financeState.selectedIndustries.size
+            ? Array.from(financeState.selectedIndustries).join(', ')
+            : '全部金融行业';
+        subtitle.textContent = `${financeState.currentMarket.toUpperCase()} · ${industriesText}`;
+
+        const dateData = getFinanceDateData();
+        const summary = dateData?.industry_summary || {};
+        const industries = getSelectedIndustries(summary);
+        let totalAssets = 0;
+        let totalDebt = 0;
+        let totalOcf = 0;
+        let totalEv = 0;
+        industries.forEach(ind => {
+            const s = summary[ind];
+            if (!s) return;
+            totalAssets += s.assets || 0;
+            totalDebt += s.debts || 0;
+            totalOcf += s.ocf || 0;
+            totalEv += s.ev || 0;
+        });
+        const ocfEv = totalEv ? totalOcf / totalEv : null;
+        const summaryContainer = document.getElementById('finance-summary-totals');
+        summaryContainer.innerHTML = `
+            <div class="summary-item"><div class="summary-label">Assets</div><div class="summary-value">${fL(totalAssets)}</div></div>
+            <div class="summary-item"><div class="summary-label">Debt</div><div class="summary-value">${fL(totalDebt)}</div></div>
+            <div class="summary-item"><div class="summary-label">OCF</div><div class="summary-value">${fL(totalOcf)}</div></div>
+            <div class="summary-item"><div class="summary-label">OCF/EV</div><div class="summary-value highlight">${ocfEv === null ? '-' : fP(ocfEv)}</div></div>
+        `;
+
+        const ctx = document.getElementById('finance-summary-chart').getContext('2d');
+        if (financeState.chart) {
+            financeState.chart.destroy();
+        }
+
+        financeState.chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: series.labels.map(formatDateLabel),
+                datasets: [
+                    { label: 'Assets Growth', data: series.assets, borderColor: '#4169E1', tension: 0.3, borderWidth: 2 },
+                    { label: 'Debt Growth', data: series.debts, borderColor: '#DC143C', tension: 0.3, borderWidth: 2 },
+                    { label: 'OCF Growth', data: series.ocf, borderColor: '#1a7f37', tension: 0.3, borderWidth: 2 },
+                    { label: 'Equity Growth', data: series.equity, borderColor: '#8b5cf6', tension: 0.3, borderWidth: 2 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fPct(ctx.parsed.y)}` } }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: v => fPct(v), font: { size: 10 } },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function getFinanceCompanies() {
+        const dateData = getFinanceDateData();
+        if (!dateData) return [];
+        let companies = [...(dateData.companies || [])];
+        if (financeState.selectedIndustries.size > 0) {
+            companies = companies.filter(c => financeState.selectedIndustries.has(c.industry));
+        }
+        companies.forEach(c => {
+            c.mkt_equity = c.equity ? c.mkt_cap / c.equity : null;
+        });
+
+        companies.sort((a, b) => {
+            let va = a[financeState.sortCol];
+            let vb = b[financeState.sortCol];
+            if (va === null || va === undefined) va = financeState.sortAsc ? Infinity : -Infinity;
+            if (vb === null || vb === undefined) vb = financeState.sortAsc ? Infinity : -Infinity;
+            if (typeof va === 'string') return financeState.sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            return financeState.sortAsc ? va - vb : vb - va;
+        });
+        return companies;
+    }
+
+    function renderFinanceTable() {
+        const tbody = document.getElementById('finance-tbody');
+        const companies = getFinanceCompanies();
+        if (companies.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px; color: #999;">无匹配金融记录</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = companies.map(c => {
+            const mktEquity = c.mkt_equity && isFinite(c.mkt_equity) ? c.mkt_equity : null;
+            return `<tr>
+                <td class="symbol-cell">${c.symbol}</td>
+                <td>${c.industry || '-'}</td>
+                <td>${fL(c.assets)}</td>
+                <td>${fL(c.debts)}</td>
+                <td>${fL(c.ocf)}</td>
+                <td>${fL(c.equity)}</td>
+                <td>${mktEquity !== null ? fN(mktEquity, 2) + 'x' : 'n/a'}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    function renderFinancePage() {
+        updateFinanceSelectors();
+        renderFinanceChart();
+        renderFinanceTable();
+    }
+
+    function sortFinanceTable(col) {
+        if (financeState.sortCol === col) {
+            financeState.sortAsc = !financeState.sortAsc;
+        } else {
+            financeState.sortCol = col;
+            financeState.sortAsc = false;
+        }
+        document.querySelectorAll('#finance-table th').forEach(th => {
+            th.classList.remove('sorted');
+            const icon = th.querySelector('.sort-icon');
+            if (icon) icon.textContent = '⇅';
+        });
+        const activeHeader = document.querySelector(`#finance-table th[data-col="${financeState.sortCol}"]`);
+        if (activeHeader) {
+            activeHeader.classList.add('sorted');
+            activeHeader.querySelector('.sort-icon').textContent = financeState.sortAsc ? '↑' : '↓';
+        }
+        renderFinanceTable();
+    }
+</script>
+
+</body>
+</html>
