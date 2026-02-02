@@ -1,0 +1,34 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Node.js
+node_modules/
+.pnpm-store/
+package-lock.json
+
+# Data files (too large)
+outputs/
+original_data_csv/
+
+# IDE
+.cursor/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.log
+*.tmp
+
+# Large directories
+rsshub_local/
+finance-dashboard/
+mcp-finnhub/
+Market_Data_Import_Skill/

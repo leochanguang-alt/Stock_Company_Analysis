@@ -1,0 +1,3604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>002508.SZ - Financial Analysis (Koyfin Style)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Fallback if CDN fails
+        if (typeof Papa === 'undefined') {
+            document.write('<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"><\/script>');
+        }
+    </script>
+    <style>
+        :root {
+            /* FT-like paper palette */
+            --ft-bg: #FFF1E5;
+            --ft-bg-muted: #F7E7D8;
+            --ft-text: #111111;
+            --ft-text-muted: #6B6B6B;
+            --ft-text-faint: #9A9A9A;
+            --ft-line: #E6D6C7;
+            --ft-line-strong: #111111;
+            --ft-accent: #B22222;   /* deep red */
+            --ft-accent-2: #0F5E9C; /* deep blue */
+            --ft-pos: #1F7A4D;
+            --ft-neg: #B00020;
+
+            /* Keep existing variable names, remap to FT tokens */
+            --primary-bg: var(--ft-bg);
+            --secondary-bg: var(--ft-bg);
+            --header-bg: var(--ft-bg);
+            --card-bg: transparent;
+            --text-color: var(--ft-text);
+            --text-muted: var(--ft-text-muted);
+            --text-dim: var(--ft-text-faint);
+            --border-color: var(--ft-line);
+            --accent-color: var(--ft-accent);
+            --accent-hover: #8E1B1B;
+            --positive: var(--ft-pos);
+            --positive-bg: rgba(31, 122, 77, 0.10);
+            --negative: var(--ft-neg);
+            --negative-bg: rgba(176, 0, 32, 0.10);
+            --section-bg: var(--ft-bg);
+            --hover-bg: rgba(0, 0, 0, 0.04);
+            --gradient-start: var(--ft-accent);
+            --gradient-end: var(--ft-accent);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background: var(--primary-bg);
+            color: var(--text-color);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            margin: 0;
+            padding: 22px 28px 40px;
+            font-size: 14px;
+            line-height: 1.55;
+            min-height: 100vh;
+        }
+
+        /* Header Area */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding: 20px 24px;
+            background: transparent;
+            border-radius: 0;
+            border: none;
+            border-top: 6px solid var(--ft-line-strong);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: none;
+        }
+
+        .title-section h1 {
+            margin: 0 0 4px 0;
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--text-color);
+            letter-spacing: 0.2px;
+        }
+
+        .view-switch {
+            display: flex;
+            gap: 4px;
+            background: transparent;
+            border-radius: 999px;
+            padding: 2px;
+            border: 1px solid var(--border-color);
+        }
+
+        .view-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .view-btn:hover { color: var(--text-color); }
+
+        .view-btn.active {
+            background: #ffffff;
+            color: var(--text-color);
+            box-shadow: none;
+        }
+
+        .company-search {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .company-search input {
+            width: 140px;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #ffffff;
+            color: var(--text-color);
+            transition: all 0.2s;
+        }
+
+        .company-search input:focus {
+            outline: none;
+            border-color: var(--ft-accent-2);
+            box-shadow: 0 0 0 3px rgba(15, 94, 156, 0.15);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 180px;
+        }
+
+        .progress-bar-wrapper {
+            flex: 1;
+            height: 6px;
+            background: var(--ft-line);
+            border-radius: 3px;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .progress-bar-wrapper.active {
+            opacity: 1;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--ft-accent-2), var(--ft-accent));
+            border-radius: 3px;
+            transition: width 0.2s ease;
+        }
+
+        .progress-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            min-width: 32px;
+            text-align: right;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .progress-text.active {
+            opacity: 1;
+        }
+
+        .company-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .company-info-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .company-info .info-item {
+            padding: 4px 10px;
+            background: transparent;
+            border-radius: 999px;
+            color: var(--text-color);
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            font-size: 11px;
+        }
+        .download-status {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .download-status.error {
+            color: var(--negative);
+        }
+
+        /* Tabs */
+        .tabs-container {
+            display: flex;
+            gap: 18px;
+            margin: 18px 0 14px;
+            padding: 10px 2px 6px;
+            background: transparent;
+            border-radius: 0;
+            border: none;
+            border-top: 4px solid var(--ft-line-strong);
+            border-bottom: 1px solid var(--border-color);
+            overflow-x: auto;
+            box-shadow: none;
+        }
+
+        .tabs-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .tabs-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tabs-container::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .tab {
+            padding: 8px 2px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 0;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            border: none;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover { color: var(--text-color); }
+
+        .tab.active {
+            color: var(--text-color);
+            background: transparent;
+            box-shadow: none;
+            border-bottom-color: var(--accent-color);
+        }
+
+        /* Table Container */
+        .table-container {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: none;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        .table-wrapper::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-wrapper::-webkit-scrollbar-track {
+            background: var(--primary-bg);
+        }
+
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th {
+            background: var(--primary-bg);
+            color: var(--text-muted);
+            font-weight: 600;
+            text-align: right;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 5;
+            text-transform: none;
+            font-size: 12px;
+            letter-spacing: 0.2px;
+        }
+
+        th:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            z-index: 15;
+            background: var(--primary-bg);
+            min-width: 220px;
+        }
+
+        td {
+            padding: 12px 16px;
+            text-align: right;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-color);
+            font-weight: 500;
+            font-variant-numeric: tabular-nums;
+        }
+
+        td:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: var(--primary-bg);
+            z-index: 10;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        tr {
+            transition: background 0.15s ease;
+        }
+
+        tr:hover td { background: var(--hover-bg); }
+        
+        tr:hover td:first-child { background: var(--hover-bg); }
+
+        /* Section Header Row */
+        .section-header {
+            background: var(--primary-bg) !important;
+            font-weight: 700 !important;
+            color: var(--text-color) !important;
+            cursor: pointer;
+        }
+
+        .section-header td {
+            background: var(--primary-bg) !important;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+        }
+
+        .section-header td:first-child {
+            background: var(--primary-bg) !important;
+        }
+
+        .section-header:hover td {
+            background: var(--hover-bg) !important;
+        }
+
+        .section-header .toggle-icon {
+            display: inline-block;
+            width: 18px;
+            margin-right: 8px;
+            color: var(--accent-color);
+            font-size: 10px;
+        }
+
+        /* Indented rows */
+        .indent-1 td:first-child { padding-left: 32px; }
+        .indent-2 td:first-child { padding-left: 48px; color: var(--text-muted); }
+        .indent-3 td:first-child { padding-left: 64px; color: var(--text-dim); font-size: 11px; }
+
+        /* Bold metric rows */
+        .metric-bold td:first-child { 
+            font-weight: 700; 
+            color: var(--text-color);
+        }
+
+        /* Italic metric rows */
+        .metric-italic td {
+            font-style: italic;
+            color: var(--text-muted);
+        }
+
+        /* Value colors */
+        .val-positive { 
+            color: var(--positive); 
+            background: var(--positive-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        
+        .val-negative { 
+            color: var(--negative); 
+            background: var(--negative-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Hidden rows */
+        .row-hidden { display: none; }
+
+        .loading {
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .loading::before {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 16px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 12 tables mode */
+        .mode-switch { margin-left: 12px; }
+        .all-tables { display: flex; flex-direction: column; gap: 18px; }
+        .all-table-section { padding-top: 8px; border-top: 1px solid var(--border-color); }
+        .all-table-title { font-weight: 700; color: var(--text-color); margin: 10px 4px 12px; }
+        .all-table-wrapper { border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 12px 16px;
+            }
+            
+            .header {
+                flex-direction: column;
+                gap: 16px;
+                padding: 16px;
+            }
+            
+            .company-search {
+                width: 100%;
+            }
+            
+            .view-switch {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="title-section">
+        <h1>Financial Analysis</h1>
+    </div>
+    <div class="company-search">
+        <input id="company-search-input" list="company-symbols" placeholder="输入代码 (e.g. 002508)" value="002508">
+        <datalist id="company-symbols"></datalist>
+        <div class="progress-container">
+            <div class="progress-bar-wrapper" id="progress-wrapper">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <span class="progress-text" id="progress-text">0%</span>
+        </div>
+        <div class="download-status" id="download-status"></div>
+        <div class="company-info" id="company-info">
+            <div class="company-info-row">
+                <span class="info-item">公司：-</span>
+                <span class="info-item">Sector：-</span>
+                <span class="info-item">Industry：-</span>
+                <span class="info-item">Market：-</span>
+            </div>
+            <div class="company-info-row">
+                <span class="info-item">EV：-</span>
+                <span class="info-item">Market Cap：-</span>
+                <span class="info-item">Beta 5Y：-</span>
+                <span class="info-item">Beta 1Y：-</span>
+                <span class="info-item">aOCF(TTM)/EV：-</span>
+                <span class="info-item">GAP：-</span>
+                <span class="info-item">Date：-</span>
+            </div>
+        </div>
+    </div>
+    <div class="view-switch">
+        <button class="view-btn" onclick="setView('ltm', this)">Last 12 Months (LTM)</button>
+        <button class="view-btn active" onclick="setView('annual', this)">Annual (Y)</button>
+        <button class="view-btn" onclick="downloadDataAsCsv()" style="margin-left: 20px; background: #2d5016;">Export CSV</button>
+    </div>
+</div>
+
+<div class="tabs-container" id="tabs"></div>
+
+<div class="table-container">
+    <div class="table-wrapper" id="table-box">
+        <div class="loading">Loading data...</div>
+    </div>
+</div>
+
+<script>
+let currentView = 'annual';
+let currentTab = 'Model100';
+let rawData = { ltm: [], annual: [] };
+let collapsedSections = {};
+let companyIndex = new Map();
+let companyLookupLoaded = false;
+let companySuggestions = [];
+let companySearchTimer = null;
+const dataCache = new Map();
+const VALIDATION_MODE = true;
+let renderMode = 'tabs'; // 固定使用标签页视图
+
+// Progress bar control functions
+function updateProgress(percent, text = null) {
+    const bar = document.getElementById('progress-bar');
+    const wrapper = document.getElementById('progress-wrapper');
+    const textEl = document.getElementById('progress-text');
+    if (!bar || !wrapper || !textEl) return;
+    
+    const clampedPercent = Math.min(100, Math.max(0, percent));
+    bar.style.width = clampedPercent + '%';
+    textEl.textContent = text || Math.round(clampedPercent) + '%';
+    
+    if (clampedPercent > 0 && clampedPercent < 100) {
+        wrapper.classList.add('active');
+        textEl.classList.add('active');
+    }
+}
+
+function showProgress() {
+    const wrapper = document.getElementById('progress-wrapper');
+    const textEl = document.getElementById('progress-text');
+    if (wrapper) wrapper.classList.add('active');
+    if (textEl) textEl.classList.add('active');
+    updateProgress(0);
+}
+
+function hideProgress() {
+    const bar = document.getElementById('progress-bar');
+    const wrapper = document.getElementById('progress-wrapper');
+    const textEl = document.getElementById('progress-text');
+    if (bar) bar.style.width = '100%';
+    if (textEl) textEl.textContent = '100%';
+    
+    setTimeout(() => {
+        if (wrapper) wrapper.classList.remove('active');
+        if (textEl) textEl.classList.remove('active');
+        if (bar) bar.style.width = '0%';
+    }, 500);
+}
+
+// Supabase config (public read)
+const SUPABASE_URL = 'https://fsyxnkzrgozmjyoxcvvh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZzeXhua3pyZ296bWp5b3hjdnZoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODExODA1MSwiZXhwIjoyMDgzNjk0MDUxfQ.k5c89GZOeM3w5ZhrhUc_7y4A9LYz-FsimHxwXcR2oyU';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Tab configurations with sections
+const tabConfigs = {
+    'Highlights': {
+        'Key Financials': [
+            { key: 'Revenue', label: 'Total Revenues', bold: true },
+            { key: 'Rev_YoY', label: 'YoY Growth %', indent: 1, format: 'pct' },
+            { key: 'Gross_Profit', label: 'Gross Profit', bold: true },
+            { key: 'Gross_Margin', label: 'Gross Profit Margin', indent: 1, format: 'pct' },
+            { key: 'EBITDA', label: 'EBITDA', bold: true },
+            { key: 'EBITDA_Margin', label: 'EBITDA Margin', indent: 1, format: 'pct' },
+            { key: 'Net_Income', label: 'Net Income', bold: true },
+            { key: 'Net_Margin', label: 'Net Income Margin', indent: 1, format: 'pct' },
+            { key: 'Diluted_EPS', label: 'Diluted EPS' },
+            { key: 'EPS_YoY', label: 'YoY Growth %', indent: 1, format: 'pct' },
+            { key: 'PE', label: 'Price / Earnings - P/E', format: 'ratio' }
+        ],
+        'Capital Structure': [
+            { key: 'Market_Cap', label: 'Market Capitalization', bold: true },
+            { key: 'Cash_Equivalents', label: 'Cash & Equivalents', indent: 1 },
+            { key: 'Total_Debt', label: 'Total Debt', indent: 1 },
+            { key: 'Minority_Interest', label: 'Minority Interest', indent: 1 },
+            { key: 'EV', label: 'Enterprise Value - EV', bold: true }
+        ],
+        'Cash Flow Analysis': [
+            { key: 'OCF', label: 'Cash from Operations', bold: true },
+            { key: 'OCF_YoY', label: 'YoY Growth %', indent: 1, format: 'pct' },
+            { key: 'CapEx', label: 'Capital Expenditure' },
+            { key: 'CapEx_YoY', label: 'YoY Growth %', indent: 1, format: 'pct' }
+        ]
+    },
+    'IncomeStatement': {
+        'Revenues': [
+            { key: 'Revenue', label: 'Total Revenues', bold: true },
+            { key: 'Main_Revenue', label: 'Revenues', indent: 1 },
+            { key: 'Other_Revenue', label: 'Other Revenues', indent: 1 },
+            { key: 'Rev_YoY', label: 'YoY Growth %', format: 'pct' }
+        ],
+        'Gross Profit': [
+            { key: 'COGS', label: 'Cost Of Revenues', indent: 1 },
+            { key: 'Gross_Profit', label: 'Gross Profit (Loss)', bold: true },
+            { key: 'Gross_Profit_YoY', label: 'YoY Growth %', format: 'pct' }
+        ],
+        'Operating Income & Expenses': [
+            { key: 'SGA_Exp', label: 'Selling General & Admin Expenses' },
+            { key: 'RD_Exp', label: 'R&D Expenses' },
+            { key: 'DA', label: 'Depreciation & Amortization' },
+            { key: 'Other_Operating_Exp', label: 'Other Operating Expenses' },
+            { key: 'Operating_Income', label: 'Operating Income', bold: true }
+        ],
+        'Net Interest Expense': [
+            { key: 'Net_Interest_Exp', label: 'Net Interest Expenses', bold: true },
+            { key: 'Interest_Exp', label: 'Interest Expense', indent: 1 },
+            { key: 'Interest_And_Investment_Income', label: 'Interest And Investment Income', indent: 1 }
+        ],
+        'Earnings Before Taxes (EBT)': [
+            { key: 'Equity_Method_Income', label: 'Income (Loss) On Equity Affiliates' },
+            { key: 'Non_Operating_Net', label: 'Other Non Operating Income (Expenses)' },
+            { key: 'EBT_Excl_Unusual', label: 'EBT, Excl. Unusual Items' },
+            { key: 'Total_Impairment', label: 'Impairment Charges' },
+            { key: 'Gain_On_Asset_Sale', label: 'Gain (Loss) On Sale Of Assets' },
+            { key: 'Other_Unusual_Items', label: 'Other Unusual Items, Total' },
+            { key: 'Pretax_Income', label: 'EBT, Incl. Unusual Items', bold: true }
+        ],
+        'Earnings from Operations | Net Income': [
+            { key: 'Income_Tax_Exp', label: 'Income Tax Expense', indent: 1 },
+            { key: 'Earnings_Continuing', label: 'Earnings From Continuing Operations' },
+            { key: 'Minority_Interest_Income', label: 'Minority Interest', indent: 1 },
+            { key: 'Net_Income', label: 'Net Income', bold: true },
+            { key: 'Net_Income_Common', label: 'Net Income to Common Incl Extra Items' }
+        ],
+        'Supplemental Items': [
+            { key: 'EBITDA', label: 'EBITDA', bold: true },
+            { key: 'EBIT', label: 'EBIT' },
+            { key: 'Selling_Exp', label: 'Selling and Marketing Expenses', indent: 1 },
+            { key: 'Admin_Exp', label: 'General and Administrative Expenses', indent: 1 }
+        ]
+    },
+    'BalanceSheet': {
+        'Assets': [
+            { key: 'Total_Cash', label: 'Total Cash And Short Term Investments', bold: true },
+            { key: 'Cash_Equivalents', label: 'Cash And Equivalents', indent: 1 },
+            { key: 'Short_Term_Investments', label: 'Short Term Investments', indent: 1 },
+            { key: 'Total_Receivables', label: 'Total Receivables', bold: true },
+            { key: 'Accounts_Receivable', label: 'Accounts Receivable', indent: 1 },
+            { key: 'Other_Receivables', label: 'Other Receivables', indent: 1 },
+            { key: 'Inventory', label: 'Inventory' },
+            { key: 'Prepaid_Expenses', label: 'Prepaid Expenses' },
+            { key: 'Other_Current_Assets', label: 'Other Current Assets' },
+            { key: 'Total_Current_Assets', label: 'Total Current Assets', bold: true },
+            { key: 'Total_PPE_Koyfin', label: 'Net Property Plant And Equipment', bold: true },
+            { key: 'Gross_PPE', label: 'Gross Property Plant And Equipment', indent: 1 },
+            { key: 'Accumulated_Depreciation', label: 'Accumulated Depreciation', indent: 1 },
+            { key: 'LT_Equity_Investment', label: 'Long-term Investments' },
+            { key: 'Goodwill', label: 'Goodwill' },
+            { key: 'Intangible_Assets', label: 'Other Intangibles' },
+            { key: 'Deferred_Tax_Asset', label: 'Deferred Tax Assets Long-Term' },
+            { key: 'LT_Prepaid_Expenses', label: 'Deferred Charges Long-Term' },
+            { key: 'Other_NonCurrent_Assets', label: 'Other Long-Term Assets' },
+            { key: 'Total_Assets', label: 'Total Assets', bold: true }
+        ],
+        'Liabilities': [
+            { key: 'Accounts_Payable', label: 'Accounts Payable' },
+            { key: 'Employee_Benefits_Payable', label: 'Accrued Expenses' },
+            { key: 'Short_Term_Debt', label: 'Short-Term Debt', indent: 1 },
+            { key: 'Current_Portion_LT_Debt', label: 'Current Portion of Long-Term Debt', indent: 1 },
+            { key: 'Taxes_Payable', label: 'Current Income Taxes Payable' },
+            { key: 'Unearned_Revenue_Total', label: 'Unearned Revenue Current, Total' },
+            { key: 'Other_Current_Liabilities', label: 'Other Current Liabilities' },
+            { key: 'Total_Current_Liabilities', label: 'Total Current Liabilities', bold: true },
+            { key: 'Long_Term_Debt', label: 'Long-Term Debt' },
+            { key: 'Lease_Liabilities', label: 'Long-Term Leases' },
+            { key: 'Unearned_Revenue_NonCurrent', label: 'Unearned Revenue Non Current' },
+            { key: 'Deferred_Tax_Liability', label: 'Deferred Tax Liability Non Current' },
+            { key: 'Other_NonCurrent_Liabilities', label: 'Other Non Current Liabilities' },
+            { key: 'Total_Liabilities', label: 'Total Liabilities', bold: true },
+            { key: 'Common_Equity', label: 'Common Equity', bold: true },
+            { key: 'Common_Stock', label: 'Common Stock', indent: 1 },
+            { key: 'Additional_Paid_In_Capital', label: 'Additional Paid In Capital', indent: 1 },
+            { key: 'Retained_Earnings', label: 'Retained Earnings', indent: 1 },
+            { key: 'Treasury_Stock', label: 'Treasury Stock', indent: 1 },
+            { key: 'Other_Comprehensive_Income', label: 'Comprehensive Income and Other', indent: 1 },
+            { key: 'Total_Equity', label: 'Total Equity', bold: true },
+            { key: 'Total_Assets', label: 'Total Liabilities And Equity', bold: true }
+        ],
+        'Supplemental Items': [
+            { key: 'Shares_Outstanding', label: 'Total Common Shares Outstanding' },
+            { key: 'Book_Value_Per_Share', label: 'Book Value / Share' },
+            { key: 'Tangible_Book_Value', label: 'Tangible Book Value' },
+            { key: 'Tangible_BV_Per_Share', label: 'Tangible Book Value Per Share' },
+            { key: 'Total_Debt', label: 'Total Debt' },
+            { key: 'Net_Debt', label: 'Net Debt' },
+            { key: 'LT_Equity_Investment', label: 'Equity Method Investments' }
+        ]
+    },
+    'CashFlow': {
+        'Net Income': [
+            { key: 'DA', label: 'Depreciation & Amortization, Total' },
+            { key: 'Net_Income', label: 'Net Income', bold: true }
+        ],
+        'Cash from Operations': [
+            { key: 'Net_Income', label: 'Net Income' },
+            { key: 'DA', label: 'Depreciation & Amortization, Total', indent: 1 },
+            { key: 'Change_In_AR', label: 'Change In Accounts Receivable', indent: 1 },
+            { key: 'Change_In_Inventory', label: 'Change In Inventories', indent: 1 },
+            { key: 'Change_In_AP', label: 'Change In Accounts Payable', indent: 1 },
+            { key: 'Other_Operating_Activities', label: 'Other Operating Activities, Total', indent: 1 },
+            { key: 'OCF', label: 'Cash from Operations', bold: true }
+        ],
+        'Cash from Investing': [
+            { key: 'CapEx', label: 'Capital Expenditure' },
+            { key: 'Proceeds_From_Asset_Sales', label: 'Sale of Property, Plant, and Equipment', indent: 1 },
+            { key: 'Cash_Acquisitions', label: 'Cash Acquisitions', indent: 1 },
+            { key: 'Cash_Divestitures', label: 'Divestitures', indent: 1 },
+            { key: 'Investment_In_Securities', label: 'Investment in Mkt and Equity Securities, Total', indent: 1 },
+            { key: 'Other_Investing_Activities', label: 'Other Investing Activities, Total', indent: 1 },
+            { key: 'ICF', label: 'Cash from Investing', bold: true }
+        ],
+        'Cash from Financing': [
+            { key: 'Total_Debt_Issued', label: 'Total Debt Issued', indent: 1 },
+            { key: 'Total_Debt_Repaid', label: 'Total Debt Repaid', indent: 1 },
+            { key: 'Proceeds_From_Equity', label: 'Issuance of Common Stock', indent: 1 },
+            { key: 'Treasury_Stock', label: 'Repurchase of Common Stock', indent: 1 },
+            { key: 'Dividends_Paid', label: 'Common & Preferred Stock Dividends Paid' },
+            { key: 'Common_Dividends_Paid', label: 'Common Dividends Paid', indent: 2 },
+            { key: 'Other_Financing_Activities', label: 'Other Financing Activities', indent: 1 },
+            { key: 'CFF', label: 'Cash from Financing', bold: true }
+        ],
+        'Net Change in Cash': [
+            { key: 'FX_Effect', label: 'Foreign Exchange Rate Adjustments', indent: 1 },
+            { key: 'Net_Change_In_Cash', label: 'Net Change in Cash', bold: true }
+        ],
+        'Supplemental Items': [
+            { key: 'FCF', label: 'Free Cash Flow', bold: true },
+            { key: 'FCF_Per_Share', label: 'Free Cash Flow per Share' },
+            { key: 'Taxes_Paid', label: 'Cash Income Tax Paid (Refund)' },
+            { key: 'Working_Capital_Change', label: 'Change In Net Working Capital' },
+            { key: 'Net_Debt_Issued', label: 'Net Debt Issued / Repaid' }
+        ]
+    },
+    'Multiples': {
+        'Sales | Revenues': [
+            { key: 'EV_Sales', label: 'EV / Sales (LTM)', format: 'ratio' },
+            { key: 'PS', label: 'Price / Sales (LTM)', format: 'ratio' }
+        ],
+        'Earnings': [
+            { key: 'EV_EBITDA', label: 'EV / EBITDA (LTM)', format: 'ratio' },
+            { key: 'EV_EBIT', label: 'EV / EBIT (LTM)', format: 'ratio' },
+            { key: 'PE', label: 'Price / Earnings (LTM)', format: 'ratio' }
+        ],
+        'Book Value': [
+            { key: 'PB', label: 'Price / Book (LTM)', format: 'ratio' },
+            { key: 'P_TangibleBV', label: 'Price / Tangible Book Value (LTM)', format: 'ratio' }
+        ]
+    },
+    'EnterpriseValue': {
+        'Capital Structure': [
+            { key: 'Market_Cap', label: 'Market Capitalization', bold: true },
+            { key: 'Total_Cash', label: 'Cash & Short Term Investments', indent: 1 },
+            { key: 'Total_Debt', label: 'Total Debt', indent: 1 },
+            { key: 'Minority_Interest', label: 'Minority Interest', indent: 1 },
+            { key: 'EV', label: 'Enterprise Value', bold: true }
+        ],
+        'Enterprise Value Multiples': [
+            { key: 'EV_Sales', label: 'EV / Sales', format: 'ratio' },
+            { key: 'EV_EBITDA', label: 'EV / EBITDA', format: 'ratio' },
+            { key: 'EV_EBIT', label: 'EV / EBIT', format: 'ratio' }
+        ],
+        'Capitalization': [
+            { key: 'Total_Capital', label: 'Total Capital', bold: true },
+            { key: 'Total_Equity', label: 'Total Common Equity', indent: 1 },
+            { key: 'Total_Debt', label: 'Total Debt', indent: 1 },
+            { key: 'Minority_Interest', label: 'Minority Interest', indent: 1 },
+            { key: 'Return_On_Capital', label: 'Return on Total Capital', format: 'pct' },
+            { key: 'Debt_to_Capital', label: 'Total Debt / Total Capital', format: 'pct' },
+            { key: 'Debt_to_Equity', label: 'Total Debt / Equity', format: 'pct' },
+            { key: 'Debt_to_EBITDA', label: 'Total Debt / EBITDA', format: 'ratio' },
+            { key: 'LT_Debt_to_Capital', label: 'Long-Term Debt / Total Capital', format: 'pct' }
+        ]
+    },
+    'Profitability': {
+        'Returns': [
+            { key: 'ROA', label: 'Return on Assets', format: 'pct' },
+            { key: 'ROE', label: 'Return On Equity', format: 'pct' },
+            { key: 'ROIC', label: 'Return on Invested Capital (ROIC)', format: 'pct' },
+            { key: 'Return_On_Capital', label: 'Return on Total Capital', format: 'pct' },
+            { key: 'Return_On_Common_Equity', label: 'Return on Common Equity', format: 'pct' }
+        ],
+        'Margins': [
+            { key: 'EBITDA_Margin', label: 'EBITDA Margin', format: 'pct' },
+            { key: 'EBITA_Margin', label: 'EBITA Margin', format: 'pct' },
+            { key: 'EBIT_Margin', label: 'EBIT Margin', format: 'pct' },
+            { key: 'EBT_Margin', label: 'EBT Margin', format: 'pct' },
+            { key: 'EBT_Excl_Unusual_Margin', label: 'EBT Excl. Non-Recurring Items Margin', format: 'pct' },
+            { key: 'Gross_Margin', label: 'Gross Profit Margin', format: 'pct' },
+            { key: 'SGA_Margin', label: 'SG&A Margin', format: 'pct' },
+            { key: 'Net_Margin', label: 'Net Income Margin', format: 'pct' },
+            { key: 'Net_Avail_Common_Margin', label: 'Net Avail. For Common Margin', format: 'pct' },
+            { key: 'Normalized_Net_Income_Margin', label: 'Normalized Net Income Margin', format: 'pct' }
+        ],
+        'Asset Turnovers': [
+            { key: 'Receivables_Turnover', label: 'Receivables Turnover (Average Receivables)', format: 'ratio' },
+            { key: 'Fixed_Assets_Turnover', label: 'Fixed Assets Turnover (Average Fixed Assets)', format: 'ratio' },
+            { key: 'Inventory_Turnover', label: 'Inventory Turnover (Average Inventory)', format: 'ratio' },
+            { key: 'Asset_Turnover', label: 'Asset Turnover', format: 'ratio' },
+            { key: 'Days_Outstanding_Inventory', label: 'Days Outstanding Inventory (Avg)', format: 'decimal' }
+        ],
+        'Short-term Liquidity': [
+            { key: 'Current_Ratio', label: 'Current Ratio', format: 'ratio' },
+            { key: 'Quick_Ratio', label: 'Quick Ratio', format: 'ratio' },
+            { key: 'Days_Sales_Outstanding', label: 'Days Sales Outstanding (Average Receivables)', format: 'decimal' },
+            { key: 'Days_Payable_Outstanding', label: 'Days Payable Outstanding (Avg)', format: 'decimal' },
+            { key: 'Cash_Conversion_Cycle', label: 'Cash Conversion Cycle (Average Days)', format: 'decimal' },
+            { key: 'Operating_Cash_Flow_to_Current_Liabilities', label: 'Operating Cash Flow to Current Liabilities', format: 'ratio' }
+        ]
+    },
+    'ROIC': {
+        'Return on Invested Capital (ROIC) = NOPAT / Average Invested Capital': [
+            { key: 'NOPAT', label: 'Net Operating Profit After Tax (NOPAT)' },
+            { key: 'Avg_Invested_Capital', label: 'Invested Capital, Average' },
+            { key: 'ROIC', label: 'Return on Invested Capital (ROIC)', bold: true, format: 'pct' }
+        ],
+        'Net Operating Profit After Tax (NOPAT)': [
+            { key: 'EBIT', label: 'EBIT' },
+            { key: 'Income_Tax_Exp', label: 'Income Tax Expense' },
+            { key: 'NOPAT', label: 'Net Operating Profit After Tax (NOPAT)', bold: true }
+        ],
+        'Average Invested Capital': [
+            { key: 'Long_Term_Debt', label: 'Long Term Debt' },
+            { key: 'Total_Short_Term_Borrowings', label: 'Short Term Borrowings' },
+            { key: 'Short_Term_Debt', label: '  Short Term Debt', indent: 1 },
+            { key: 'Current_Portion_LT_Debt', label: '  Current Portion of LT Debt', indent: 1 },
+            { key: 'Total_Equity', label: 'Total Equity' },
+            { key: 'Lease_Liabilities', label: 'Long Term Leases' },
+            { key: 'Invested_Capital', label: 'Invested Capital', bold: true },
+            { key: 'Avg_Invested_Capital', label: 'Invested Capital, Average', bold: true }
+        ]
+    },
+    'Solvency': {
+        'Debt Analysis': [
+            { key: 'Debt_to_Equity', label: 'Total Debt / Equity', format: 'pct' },
+            { key: 'Debt_to_Capital', label: 'Total Debt / Capital', format: 'pct' },
+            { key: 'LT_Debt_to_Equity', label: 'Long-Term Debt / Equity', format: 'pct' },
+            { key: 'LT_Debt_to_Capital', label: 'Long-Term Debt / Capital', format: 'pct' },
+            { key: 'Liabilities_to_Assets', label: 'Total Liabilities / Total Assets', format: 'pct' }
+        ],
+        'Interest Rate Coverage': [
+            { key: 'Interest_Coverage_EBIT', label: 'EBIT / Interest Expense', format: 'ratio' },
+            { key: 'Interest_Coverage_EBITDA', label: 'EBITDA / Interest Expense', format: 'ratio' },
+            { key: 'Interest_Coverage_EBITDA_CapEx', label: '(EBITDA - Capex) / Interest Expense', format: 'ratio' }
+        ],
+        'Debt Coverage': [
+            { key: 'Debt_to_EBITDA', label: 'Total Debt / EBITDA', format: 'ratio' },
+            { key: 'Net_Debt_to_EBITDA', label: 'Net Debt / EBITDA', format: 'ratio' }
+        ],
+        'Liquidity': [
+            { key: 'Current_Ratio', label: 'Current Ratio', format: 'ratio' }
+        ],
+        'Bankruptcy Risk': [
+            { key: 'Altman_Z_Score', label: 'Altman Z-Score', format: 'decimal' }
+        ]
+    },
+    'Model100': {
+        'operation analysis': [
+            { key: 'EV', label: 'Enterprise Value - EV', bold: true },
+            { key: 'Market_Cap', label: 'Market Capitalization', indent: 1 },
+            { key: 'Total_Debt', label: 'Total Debt', indent: 1 },
+            { key: 'Total_Debt_YoY', label: 'Debt Growth', indent: 2, italic: true, format: 'pct' },
+            { key: 'Cash_Equivalents', label: 'Cash And Equivalents', indent: 1 },
+            { key: 'Minority_Interest', label: 'Minority Interest (Balance Sheet)', indent: 1 },
+            { key: 'Total_Assets', label: 'Total Assets' },
+            { key: 'Total_Assets_YoY', label: 'Assets Growth', indent: 1, italic: true, format: 'pct' },
+            { key: 'OCF', label: 'Cash from Operations' },
+            { key: 'Adj_OCF', label: 'Adj. Op Cash Flow', indent: 1 },
+            { key: 'Adj_OCF_YoY', label: 'Adj. Op Cash Flow Growth', indent: 2, italic: true, format: 'pct' },
+            { key: 'Working_Capital_Change', label: 'Change In Net Working Capital' },
+            { key: 'Total_Equity', label: 'Total Equity' },
+            { key: 'Total_Equity_YoY', label: 'Equity Growth', indent: 1, italic: true, format: 'pct' },
+            { key: 'Adj_Equity', label: 'Adj. Equity', indent: 1 },
+            { key: 'Dividends_Paid', label: 'Common Dividends Paid' },
+            { key: 'Dividends_to_MktCap', label: 'Common Dividends / Market Cap', indent: 1, italic: true, format: 'pct' },
+            { key: 'Dividends_to_OCF', label: 'Common Dividends / Op Cash Flow', indent: 1, italic: true, format: 'pct' },
+            { key: 'Altman_Z_Score', label: 'Altman Z-Score', format: 'decimal' },
+            { key: 'ROIC', label: 'Return on Invested Capital (ROIC)', format: 'pct' },
+            { key: 'Working_Capital', label: 'Working Capital' },
+            { key: 'Revenue', label: 'Total Revenues' },
+            { key: 'Rev_YoY', label: 'Revenue Growth', indent: 1, italic: true, format: 'pct' },
+            { key: 'COGS', label: 'Cost Of Revenues' },
+            { key: 'Gross_Profit', label: 'Gross Profit' },
+            { key: 'Gross_Margin', label: 'Gross Profit Margin %', format: 'pct' }
+        ],
+        'Valuation': [
+            { key: 'Op_CF_Assets', label: 'Op CF/Assets', format: 'pct' },
+            { key: 'Op_CF_EV', label: 'Op CF/EV', format: 'pct' },
+            { key: 'Gap', label: 'Gap', format: 'pct' },
+            { key: 'MktCap_to_Equity', label: 'Mkt Cap/Equity', format: 'ratio' }
+        ]
+    },
+    'Holders': {
+        '股东人数分析': [
+            { key: 'holder_count', label: '股东总户数', bold: true, format: 'integer' },
+            { key: 'holder_count_change_pct', label: '总户数减少率', indent: 1, format: 'pct_signed' },
+            { key: 'Market_Cap_Billion', label: '总市值(亿元)', bold: true, format: 'decimal' },
+            { key: 'market_cap_change_pct', label: '总市值增加率', indent: 1, format: 'pct_signed' },
+            { key: 'relative_strength', label: '相对上证指数强度', format: 'pct_signed' },
+            { key: 'avg_shares_per_holder', label: '户均持股金额(万元)', bold: true, format: 'decimal' },
+            { key: 'avg_shares_change_pct', label: '户均持股金额增长率', indent: 1, format: 'pct_signed' }
+        ],
+        '上证指数对比': [
+            { key: 'sh_index', label: '上证指数', format: 'integer' },
+            { key: 'sh_index_change_pct', label: '上证指数涨跌', format: 'pct_signed' }
+        ]
+    }
+};
+
+// 股东数据缓存
+let holdersData = [];
+let holdersDataLoaded = false;
+
+// TOP 10 股东数据缓存
+let top10ShareholdersData = [];
+let top10DataLoaded = false;
+
+// News 数据缓存
+let newsData = [];
+let newsDataLoaded = false;
+
+// 市场指数数据缓存
+let marketIndexData = [];
+let marketIndexDataLoaded = false;
+
+function initTabs() {
+    const container = document.getElementById('tabs');
+    const tabNames = ['Highlights', 'IncomeStatement', 'BalanceSheet', 'CashFlow', 'Multiples', 'EnterpriseValue', 'Profitability', 'ROIC', 'Solvency', 'Holders', 'Top10Shareholders', 'News', 'Model100'];
+    const tabLabels = {
+        'Highlights': 'Highlights',
+        'IncomeStatement': 'Income Statement',
+        'BalanceSheet': 'Balance Sheet',
+        'CashFlow': 'Cash Flow',
+        'Multiples': 'Multiples',
+        'EnterpriseValue': 'Enterprise Value',
+        'Profitability': 'Profitability',
+        'ROIC': 'ROIC',
+        'Solvency': 'Solvency',
+        'Holders': 'Holders',
+        'Top10Shareholders': 'TOP 10 Shareholder',
+        'News': 'News',
+        'Model100': 'Model100'
+    };
+    
+    tabNames.forEach(tab => {
+        const el = document.createElement('div');
+        el.className = `tab ${tab === currentTab ? 'active' : ''}`;
+        el.innerText = tabLabels[tab];
+        el.onclick = () => setTab(tab, el);
+        container.appendChild(el);
+    });
+}
+
+function setRenderMode(mode, btn) {
+    renderMode = mode;
+    // toggle active button within the mode switch
+    const modeSwitch = document.querySelector('.mode-switch');
+    if (modeSwitch) {
+        modeSwitch.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+    render();
+}
+
+const accountMapping = {
+    // Income Statement
+    '营业收入': 'Revenue',
+    '营业总收入': 'Total_Revenue_Gross',
+    '其他业务收入': 'Other_Business_Revenue',
+    '其他业务利润': 'Other_Business_Profit',
+    '其他业务成本': 'Other_Business_Cost',
+    '营业成本': 'COGS',
+    '营业总成本': 'Total_Operating_Cost',
+    '营业利润': 'Operating_Income',
+    '利润总额': 'Pretax_Income',
+    '所得税费用': 'Income_Tax_Exp',
+    '净利润': 'Net_Income',
+    '归属于母公司所有者的净利润': 'Net_Income_Parent',
+    '少数股东损益': 'Minority_Interest_Income',
+    '持续经营净利润': 'Continuing_Operations_Income',
+    '销售费用': 'Selling_Exp',
+    '管理费用': 'Admin_Exp',
+    '研发费用': 'RD_Exp',
+    '财务费用': 'Fin_Exp',
+    '利息收入': 'Interest_Inc',
+    '利息支出': 'Interest_Exp',
+    '利息费用': 'Interest_Exp_Alt',
+    '营业税金及附加': 'Taxes_Surcharges',
+    '资产减值损失': 'Asset_Impairment',
+    '信用减值损失': 'Credit_Impairment',
+    '资产处置收益': 'Asset_Disposal_Gain',
+    '非流动资产处置利得': 'NonCurrent_Asset_Disposal_Gain',
+    '非流动资产处置损失': 'NonCurrent_Asset_Disposal_Loss',
+    '投资收益': 'Investment_Income',
+    '对联营企业和合营企业的投资收益': 'Equity_Method_Income',
+    '公允价值变动收益': 'FV_Change_Income',
+    '其他收益': 'Other_Income',
+    '营业外收入': 'Non_Operating_Income',
+    '营业外支出': 'Non_Operating_Exp',
+    '汇兑收益': 'FX_Gain',
+    '基本每股收益': 'EPS',
+    '稀释每股收益': 'Diluted_EPS',
+    // Balance Sheet - Assets
+    '资产总计': 'Total_Assets',
+    '流动资产合计': 'Total_Current_Assets',
+    '货币资金': 'Cash_Equivalents',
+    '交易性金融资产': 'Short_Term_Investments',
+    '应收账款': 'Accounts_Receivable',
+    '应收票据': 'Notes_Receivable',
+    '应收票据及应收账款': 'Notes_AR_Combined',
+    '应收款项融资': 'Financing_Receivables',
+    '预付款项': 'Prepaid_Expenses',
+    '其他应收款': 'Other_Receivables',
+    '其他应收款(合计)': 'Other_Receivables_Total',
+    '存货': 'Inventory',
+    '合同资产': 'Contract_Assets',
+    '其他流动资产': 'Other_Current_Assets',
+    '非流动资产合计': 'Total_NonCurrent_Assets',
+    '固定资产净额': 'Net_PPE',
+    '固定资产原值': 'Gross_PPE',
+    '累计折旧': 'Accumulated_Depreciation',
+    '在建工程': 'Construction_In_Progress',
+    '在建工程合计': 'Construction_In_Progress_Total',
+    '无形资产': 'Intangible_Assets',
+    '开发支出': 'Development_Costs',
+    '商誉': 'Goodwill',
+    '长期股权投资': 'LT_Equity_Investment',
+    '其他权益工具投资': 'Other_Equity_Investments',
+    '其他非流动金融资产': 'Other_NonCurrent_Financial_Assets',
+    '投资性房地产': 'Investment_Property',
+    '递延所得税资产': 'Deferred_Tax_Asset',
+    '其他非流动资产': 'Other_NonCurrent_Assets',
+    '使用权资产': 'Right_Of_Use_Assets',
+    '长期待摊费用': 'LT_Prepaid_Expenses',
+    '长期应收款': 'LT_Receivables',
+    // Balance Sheet - Liabilities
+    '负债合计': 'Total_Liabilities',
+    '流动负债合计': 'Total_Current_Liabilities',
+    '短期借款': 'Short_Term_Debt',
+    '应付账款': 'Accounts_Payable',
+    '应付票据': 'Notes_Payable',
+    '应付票据及应付账款': 'Notes_AP_Combined',
+    '预收款项': 'Unearned_Revenue',
+    '合同负债': 'Contract_Liabilities',
+    '应付职工薪酬': 'Employee_Benefits_Payable',
+    '应交税费': 'Taxes_Payable',
+    '其他应付款': 'Other_Payables',
+    '其他应付款合计': 'Other_Payables_Total',
+    '一年内到期的非流动负债': 'Current_Portion_LT_Debt',
+    '其他流动负债': 'Other_Current_Liabilities',
+    '非流动负债合计': 'Total_NonCurrent_Liabilities',
+    '长期借款': 'Long_Term_Debt',
+    '应付债券': 'Bonds_Payable',
+    '租赁负债': 'Lease_Liabilities',
+    '长期应付款': 'LT_Payables',
+    '长期应付款合计': 'LT_Payables_Total',
+    '长期应付职工薪酬': 'LT_Employee_Benefits',
+    '递延所得税负债': 'Deferred_Tax_Liability',
+    '递延收益': 'Deferred_Revenue',
+    '长期递延收益': 'LT_Deferred_Revenue',
+    '其他非流动负债': 'Other_NonCurrent_Liabilities',
+    '预计流动负债': 'Accrued_Liabilities',
+    // Balance Sheet - Equity
+    '所有者权益(或股东权益)合计': 'Total_Equity',
+    '归属于母公司股东权益合计': 'Equity_Parent',
+    '少数股东权益': 'Minority_Interest',
+    '实收资本(或股本)': 'Common_Stock',
+    '资本公积': 'Additional_Paid_In_Capital',
+    '盈余公积': 'Surplus_Reserve',
+    '未分配利润': 'Retained_Earnings',
+    '减:库存股': 'Treasury_Stock',
+    '其他综合收益': 'Other_Comprehensive_Income',
+    // Cash Flow
+    '经营活动产生的现金流量净额': 'OCF',
+    '投资活动产生的现金流量净额': 'ICF',
+    '筹资活动产生的现金流量净额': 'CFF',
+    '购建固定资产、无形资产和其他长期资产所支付的现金': 'CapEx',
+    '分配股利、利润或偿付利息所支付的现金': 'Dividends_Paid',
+    '销售商品、提供劳务收到的现金': 'Cash_From_Sales',
+    '收到的税费返还': 'Tax_Refunds',
+    '支付给职工以及为职工支付的现金': 'Employee_Cash_Paid',
+    '支付的各项税费': 'Taxes_Paid',
+    '取得借款收到的现金': 'Proceeds_From_Borrowings',
+    '偿还债务支付的现金': 'Repayment_Of_Debt',
+    '吸收投资收到的现金': 'Proceeds_From_Equity',
+    '现金及现金等价物净增加额': 'Net_Change_In_Cash',
+    '处置固定资产、无形资产和其他长期资产所收回的现金净额': 'Proceeds_From_Asset_Sales',
+    '投资所支付的现金': 'Cash_For_Investments',
+    '收回投资所收到的现金': 'Proceeds_From_Investment_Sales',
+    '取得投资收益收到的现金': 'Cash_From_Investment_Income',
+    '汇率变动对现金及现金等价物的影响': 'FX_Effect',
+    '期初现金及现金等价物余额': 'Beginning_Cash',
+    '期末现金及现金等价物余额': 'Ending_Cash',
+    '收到的其他与经营活动有关的现金': 'Other_Operating_Cash_In',
+    '支付的其他与经营活动有关的现金': 'Other_Operating_Cash_Out',
+    '购买商品、接受劳务支付的现金': 'Cash_Paid_For_Goods',
+    '收到的其他与投资活动有关的现金': 'Other_Investing_Cash_In',
+    '支付的其他与投资活动有关的现金': 'Other_Investing_Cash_Out',
+    '取得子公司及其他营业单位支付的现金净额': 'Cash_Acquisitions',
+    '处置子公司及其他营业单位收到的现金净额': 'Cash_Divestitures',
+    '收到其他与筹资活动有关的现金': 'Other_Financing_Cash_In',
+    '支付其他与筹资活动有关的现金': 'Other_Financing_Cash_Out',
+    '子公司吸收少数股东投资收到的现金': 'Minority_Investment_Received',
+    '子公司支付给少数股东的股利、利润': 'Minority_Dividends_Paid',
+    '发行债券收到的现金': 'Bond_Issuance',
+    '经营活动现金流入小计': 'Operating_Cash_Inflow',
+    '经营活动现金流出小计': 'Operating_Cash_Outflow',
+    '投资活动现金流入小计': 'Investing_Cash_Inflow',
+    '投资活动现金流出小计': 'Investing_Cash_Outflow',
+    '筹资活动现金流入小计': 'Financing_Cash_Inflow',
+    '筹资活动现金流出小计': 'Financing_Cash_Outflow',
+    '累计折旧': 'Accumulated_Depreciation'
+};
+
+// Add AKShare uppercase column name mappings
+const akshareMapping = {
+    // Balance Sheet
+    'MONETARYFUNDS': 'Cash_Equivalents',
+    'TOTAL_ASSETS': 'Total_Assets',
+    'TOTAL_CURRENT_ASSETS': 'Total_Current_Assets',
+    'TOTAL_NONCURRENT_ASSETS': 'Total_NonCurrent_Assets',
+    'TOTAL_LIABILITIES': 'Total_Liabilities',
+    'TOTAL_CURRENT_LIAB': 'Total_Current_Liabilities',
+    'TOTAL_NONCURRENT_LIAB': 'Total_NonCurrent_Liabilities',
+    'TOTAL_EQUITY': 'Total_Equity',
+    'TOTAL_PARENT_EQUITY': 'Equity_Parent',
+    'MINORITY_EQUITY': 'Minority_Interest',
+    'ACCOUNTS_RECE': 'Accounts_Receivable',
+    'NOTE_RECE': 'Notes_Receivable',
+    'NOTE_ACCOUNTS_RECE': 'Notes_AR_Combined',
+    'PREPAYMENT': 'Prepaid_Expenses',
+    'OTHER_RECE': 'Other_Receivables',
+    'TOTAL_OTHER_RECE': 'Other_Receivables_Total',
+    'INVENTORY': 'Inventory',
+    'OTHER_CURRENT_ASSET': 'Other_Current_Assets',
+    'FIXED_ASSET': 'Net_PPE',
+    'CIP': 'Construction_In_Progress',
+    'INTANGIBLE_ASSET': 'Intangible_Assets',
+    'GOODWILL': 'Goodwill',
+    'LONG_EQUITY_INVEST': 'LT_Equity_Investment',
+    'DEFER_TAX_ASSET': 'Deferred_Tax_Asset',
+    'OTHER_NONCURRENT_ASSET': 'Other_NonCurrent_Assets',
+    'USERIGHT_ASSET': 'Right_Of_Use_Assets',
+    'LONG_PREPAID_EXPENSE': 'LT_Prepaid_Expenses',
+    'SHORT_LOAN': 'Short_Term_Debt',
+    'ACCOUNTS_PAYABLE': 'Accounts_Payable',
+    'NOTE_PAYABLE': 'Notes_Payable',
+    'NOTE_ACCOUNTS_PAYABLE': 'Notes_AP_Combined',
+    'ADVANCE_RECEIVABLES': 'Unearned_Revenue',
+    'CONTRACT_LIAB': 'Contract_Liabilities',
+    'STAFF_SALARY_PAYABLE': 'Employee_Benefits_Payable',
+    'TAX_PAYABLE': 'Taxes_Payable',
+    'OTHER_PAYABLE': 'Other_Payables',
+    'TOTAL_OTHER_PAYABLE': 'Other_Payables_Total',
+    'NONCURRENT_LIAB_1YEAR': 'Current_Portion_LT_Debt',
+    'OTHER_CURRENT_LIAB': 'Other_Current_Liabilities',
+    'LONG_LOAN': 'Long_Term_Debt',
+    'BOND_PAYABLE': 'Bonds_Payable',
+    'LEASE_LIAB': 'Lease_Liabilities',
+    'LONG_PAYABLE': 'LT_Payables',
+    'DEFER_TAX_LIAB': 'Deferred_Tax_Liability',
+    'DEFER_INCOME': 'Deferred_Revenue',
+    'SHARE_CAPITAL': 'Common_Stock',
+    'CAPITAL_RESERVE': 'Additional_Paid_In_Capital',
+    'SURPLUS_RESERVE': 'Surplus_Reserve',
+    'UNASSIGN_RPOFIT': 'Retained_Earnings',
+    'TREASURY_SHARES': 'Treasury_Stock',
+    'OTHER_COMPRE_INCOME': 'Other_Comprehensive_Income',
+    'TRADE_FINASSET': 'Short_Term_Investments',
+    // Income Statement
+    'OPERATE_INCOME': 'Revenue',
+    'TOTAL_OPERATE_INCOME': 'Total_Revenue_Gross',
+    'OPERATE_COST': 'COGS',
+    'TOTAL_OPERATE_COST': 'Total_Operating_Cost',
+    'OPERATE_PROFIT': 'Operating_Income',
+    'TOTAL_PROFIT': 'Pretax_Income',
+    'INCOME_TAX': 'Income_Tax_Exp',
+    'NETPROFIT': 'Net_Income',
+    'PARENT_NETPROFIT': 'Net_Income_Parent',
+    'MINORITY_INTEREST': 'Minority_Interest_Income',
+    'CONTINUED_NETPROFIT': 'Continuing_Operations_Income',
+    'SALE_EXPENSE': 'Selling_Exp',
+    'MANAGE_EXPENSE': 'Admin_Exp',
+    'RESEARCH_EXPENSE': 'RD_Exp',
+    'FINANCE_EXPENSE': 'Fin_Exp',
+    'INTEREST_INCOME': 'Interest_Inc',
+    'INTEREST_EXPENSE': 'Interest_Exp',
+    'OPERATE_TAX_ADD': 'Taxes_Surcharges',
+    'ASSET_IMPAIRMENT_LOSS': 'Asset_Impairment',
+    'CREDIT_IMPAIRMENT_LOSS': 'Credit_Impairment',
+    'ASSET_DISPOSAL_INCOME': 'Asset_Disposal_Gain',
+    'NONCURRENT_DISPOSAL_INCOME': 'NonCurrent_Asset_Disposal_Gain',
+    'NONCURRENT_DISPOSAL_LOSS': 'NonCurrent_Asset_Disposal_Loss',
+    'INVEST_INCOME': 'Investment_Income',
+    'INVEST_JOINT_INCOME': 'Equity_Method_Income',
+    'FAIRVALUE_CHANGE_INCOME': 'FV_Change_Income',
+    'OTHER_INCOME': 'Other_Income',
+    'NONBUSINESS_INCOME': 'Non_Operating_Income',
+    'NONBUSINESS_EXPENSE': 'Non_Operating_Exp',
+    'EXCHANGE_INCOME': 'FX_Gain',
+    'BASIC_EPS': 'EPS',
+    'DILUTED_EPS': 'Diluted_EPS',
+    // Cash Flow Statement
+    'NETCASH_OPERATE': 'OCF',
+    'NETCASH_INVEST': 'ICF',
+    'NETCASH_FINANCE': 'FCF_Financing',
+    'SALES_SERVICES': 'Cash_From_Sales',
+    'BUY_SERVICES': 'Cash_For_Goods',
+    'PAY_STAFF_CASH': 'Cash_For_Employees',
+    'PAY_ALL_TAX': 'Cash_For_Taxes',
+    'RECEIVE_TAX_REFUND': 'Tax_Refunds_Received',
+    'RECEIVE_OTHER_OPERATE': 'Other_Operating_Cash_In',
+    'PAY_OTHER_OPERATE': 'Other_Operating_Cash_Out',
+    'WITHDRAW_INVEST': 'Cash_From_Divestment',
+    'RECEIVE_INVEST_INCOME': 'Investment_Income_Received',
+    'DISPOSAL_LONG_ASSET': 'Cash_From_Asset_Sales',
+    'DISPOSAL_SUBSIDIARY_OTHER': 'Cash_From_Subsidiary_Sales',
+    'RECEIVE_OTHER_INVEST': 'Other_Investing_Cash_In',
+    'CONSTRUCT_LONG_ASSET': 'CapEx',
+    'INVEST_PAY_CASH': 'Cash_For_Investments',
+    'BUY_SUBSIDIARY_EQUITY': 'Cash_For_Acquisitions',
+    'PAY_OTHER_INVEST': 'Other_Investing_Cash_Out',
+    'ACCEPT_INVEST_CASH': 'Cash_From_Stock_Issuance',
+    'SUBSIDIARY_ACCEPT_INVEST': 'Minority_Investment_Received',
+    'RECEIVE_LOAN_CASH': 'Loan_Proceeds',
+    'ISSUE_BOND': 'Bond_Issuance',
+    'RECEIVE_OTHER_FINANCE': 'Other_Financing_Cash_In',
+    'PAY_DEBT_CASH': 'Debt_Repayment',
+    'ASSIGN_DIVIDEND_PORFIT': 'Dividends_Paid',
+    'SUBSIDIARY_PAY_DIVIDEND': 'Minority_Dividends_Paid',
+    'PAY_OTHER_FINANCE': 'Other_Financing_Cash_Out',
+    'TOTAL_OPERATE_INFLOW': 'Operating_Cash_Inflow',
+    'TOTAL_OPERATE_OUTFLOW': 'Operating_Cash_Outflow',
+    'TOTAL_INVEST_INFLOW': 'Investing_Cash_Inflow',
+    'TOTAL_INVEST_OUTFLOW': 'Investing_Cash_Outflow',
+    'TOTAL_FINANCE_INFLOW': 'Financing_Cash_Inflow',
+    'TOTAL_FINANCE_OUTFLOW': 'Financing_Cash_Outflow',
+    'FA_IR_DEPR': 'Depreciation',
+    'IA_AMORTIZE': 'Amortization',
+    'LPE_AMORTIZE': 'LT_Prepaid_Exp_Amortization',
+    'BEGIN_CASH': 'Beginning_Cash',
+    'END_CASH': 'Ending_Cash'
+};
+
+Object.assign(accountMapping, akshareMapping);
+
+Object.entries(accountMapping).forEach(([_, key]) => {
+    if (key) accountMapping[String(key).toUpperCase()] = key;
+});
+
+const statusCols = [
+    'Total_Assets', 'Total_Liabilities', 'Total_Equity', 'Equity_Parent', 'Minority_Interest',
+    'Cash_Equivalents', 'Short_Term_Investments', 'Accounts_Receivable', 'Notes_Receivable',
+    'Notes_AR_Combined', 'Prepaid_Expenses', 'Other_Receivables', 'Inventory', 'Other_Current_Assets',
+    'Total_Current_Assets', 'Total_NonCurrent_Assets', 'Net_PPE', 'Construction_In_Progress',
+    'Intangible_Assets', 'Goodwill', 'LT_Equity_Investment', 'Deferred_Tax_Asset',
+    'Other_NonCurrent_Assets', 'Right_Of_Use_Assets', 'LT_Prepaid_Expenses',
+    'Total_Current_Liabilities', 'Total_NonCurrent_Liabilities', 'Short_Term_Debt',
+    'Accounts_Payable', 'Notes_Payable', 'Notes_AP_Combined', 'Unearned_Revenue',
+    'Contract_Liabilities', 'Employee_Benefits_Payable', 'Taxes_Payable', 'Other_Payables',
+    'Current_Portion_LT_Debt', 'Other_Current_Liabilities', 'Long_Term_Debt', 'Bonds_Payable',
+    'Lease_Liabilities', 'LT_Payables', 'Deferred_Tax_Liability', 'Deferred_Revenue',
+    'LT_Deferred_Revenue', 'Common_Stock', 'Additional_Paid_In_Capital', 'Surplus_Reserve',
+    'Retained_Earnings', 'Treasury_Stock', 'Other_Comprehensive_Income'
+];
+
+function parseReportDate(value) {
+    if (!value) return null;
+    const s = String(value);
+    if (/^[0-9]{8}$/.test(s)) {
+        return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+    }
+    if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(s)) return s;
+    return s.slice(0, 10);
+}
+
+async function fetchAllFinancials(symbol) {
+    const rows = [];
+    const pageSize = 1000;
+    let from = 0;
+    while (true) {
+        const { data, error } = await supabaseClient
+            .from('company_financials_long')
+            .select('symbol,report_date,statement_type,account,value,report_type,updated_at')
+            .eq('symbol', symbol)
+            .range(from, from + pageSize - 1);
+        if (error) throw new Error(error.message || 'Failed to load financials');
+        if (!data || data.length === 0) break;
+        rows.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+    }
+    return rows;
+}
+
+function normalizeMarketCapValue(raw, unit = null) {
+    // All Supabase market cap data is now standardized to 十亿 (billion CNY) unit
+    const val = raw !== null && raw !== undefined ? Number(raw) : NaN;
+    if (!isFinite(val)) return null;
+    
+    // Simply multiply by 1e9 to convert from billion to raw CNY
+    return val * 1e9;
+}
+
+function normalizeMarketCapRecord(row, mapper) {
+    const date = parseReportDate(row.date);
+    if (!date) return null;
+    const cap = normalizeMarketCapValue(mapper(row));
+    if (cap === null) return null;
+    return { date, cap };
+}
+
+async function fetchHoldersData(symbol) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('cn_sharehold_data')
+            .select('*')
+            .eq('symbol', symbol)
+            .order('report_date', { ascending: true });
+        
+        if (error) {
+            console.warn('Failed to fetch holders data:', error.message);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.warn('Holders data fetch error:', err);
+        return [];
+    }
+}
+
+async function fetchTop10ShareholdersData(symbol) {
+    try {
+        // 统一使用纯数字代码查询（去除 SZ/SH 前缀）
+        let querySymbol = symbol;
+        const m = String(symbol || '').toUpperCase().match(/^(SZ|SH)(\d{6})$/);
+        if (m) {
+            querySymbol = m[2];  // 提取纯数字部分
+        }
+        
+        const { data, error } = await supabaseClient
+            .from('cn_top10_sharehold')
+            .select('*')
+            .eq('symbol', querySymbol)
+            .order('report_date', { ascending: true });
+        
+        if (error) {
+            console.warn('Failed to fetch top10 shareholders data:', error.message);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.warn('Top10 shareholders data fetch error:', err);
+        return [];
+    }
+}
+
+async function fetchNewsData(symbol) {
+    try {
+        let querySymbol = symbol;
+        // 兼容 SZ/SH 前缀输入
+        const m = String(symbol || '').toUpperCase().match(/^(SZ|SH)(\d{6})$/);
+        if (m) querySymbol = m[2];
+
+        const { data, error } = await supabaseClient
+            .from('cn_company_news')
+            .select('symbol,news_title,news_content,published_at,source,news_url,grade,mkt_cap_change_1_month')
+            .eq('symbol', querySymbol)
+            .order('published_at', { ascending: false })
+            .limit(200);
+
+        if (error) {
+            console.warn('Failed to fetch news:', error.message);
+            return [];
+        }
+        return data || [];
+    } catch (err) {
+        console.warn('News fetch error:', err);
+        return [];
+    }
+}
+
+async function fetchMarketIndexHistory(symbol = '000001', market = 'SSE') {
+    try {
+        const pageSize = 1000;
+        const rows = [];
+        let from = 0;
+        
+        while (true) {
+            const { data, error } = await supabaseClient
+                .from('market_index_history')
+                .select('*')
+                .eq('symbol', symbol)
+                .eq('market', market)
+                .order('date', { ascending: true })
+                .range(from, from + pageSize - 1);
+            
+            if (error) {
+                console.warn('Failed to fetch market index data:', error.message);
+                break;
+            }
+            if (!data || data.length === 0) break;
+            
+            rows.push(...data);
+            
+            if (data.length < pageSize) break;
+            from += pageSize;
+        }
+        
+        console.log(`Fetched total ${rows.length} market index records`);
+        return rows;
+    } catch (err) {
+        console.warn('Market index data fetch error:', err);
+        return [];
+    }
+}
+
+async function fetchMarketCapHistory(symbol) {
+    const pageSize = 1000;
+    // First try to get data with unit field for proper conversion
+    const rows = [];
+    let from = 0;
+    while (true) {
+        const { data, error } = await supabaseClient
+            .from('stock_valuation_history')
+            .select('symbol,date,Market_cap,unit')
+            .eq('symbol', symbol)
+            .range(from, from + pageSize - 1);
+        if (error) break;
+        if (!data || data.length === 0) break;
+        rows.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+    }
+    
+    if (rows.length > 0) {
+        const normalized = rows
+            .map(r => {
+                const date = parseReportDate(r.date);
+                if (!date) return null;
+                const cap = normalizeMarketCapValue(r.Market_cap, r.unit);
+                if (cap === null) return null;
+                return { date, cap };
+            })
+            .filter(Boolean);
+        if (normalized.length) return normalized;
+    }
+    return [];
+}
+
+function normalizeMarketCapCsvRows(rows) {
+    const out = [];
+    rows.forEach(r => {
+        const date = parseReportDate(r.date);
+        if (!date) return;
+        // CSV columns ending in _billion_cny are in billion units
+        let raw, unit;
+        if (r.mkt_cap_billion_cny !== undefined) {
+            raw = r.mkt_cap_billion_cny;
+            unit = 'bn';
+        } else if (r.market_cap_billion_cny !== undefined) {
+            raw = r.market_cap_billion_cny;
+            unit = 'bn';
+        } else {
+            raw = r.market_cap ?? r.mkt_cap;
+            unit = null;  // rely on heuristic
+        }
+        const cap = normalizeMarketCapValue(raw, unit);
+        if (cap === null) return;
+        out.push({ date, cap });
+    });
+    return out;
+}
+
+async function loadMarketCapFromCsv(symbol) {
+    try {
+        const res = await fetch(`outputs/${symbol}_mkt_cap_10y.csv`);
+        if (!res.ok) return [];
+        const text = await res.text();
+        const parsed = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true });
+        return normalizeMarketCapCsvRows(parsed.data || []);
+    } catch (err) {
+        return [];
+    }
+}
+
+function buildWideRows(records) {
+    const byDate = new Map();
+    records.forEach(rec => {
+        const reportType = rec.report_type ? String(rec.report_type).toLowerCase() : '';
+        if (reportType.includes('ltm')) return;
+        const account = rec.account;
+        const key = accountMapping[account];
+        if (!key) return;
+        const date = parseReportDate(rec.report_date);
+        if (!date) return;
+        if (!byDate.has(date)) byDate.set(date, { report_date: date, _updated: {} });
+        const row = byDate.get(date);
+        const existingUpdated = row._updated[key];
+        const updatedAt = rec.updated_at || '';
+        if (!existingUpdated || String(updatedAt) >= String(existingUpdated)) {
+            row[key] = rec.value !== null && rec.value !== undefined ? Number(rec.value) : null;
+            row._updated[key] = updatedAt;
+        }
+    });
+    const rows = Array.from(byDate.values())
+        .sort((a, b) => new Date(a.report_date) - new Date(b.report_date));
+    rows.forEach(r => delete r._updated);
+    return rows;
+}
+
+function computeLtmRows(rows) {
+    const flowCols = Object.values(accountMapping).filter(c => !statusCols.includes(c));
+    const map = new Map(rows.map(r => [r.report_date, r]));
+    return rows.map(row => {
+        const d = new Date(row.report_date);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        if (month === 12 && day === 31) return { ...row };
+        const priorYearEndKey = `${year - 1}-12-31`;
+        const priorSameKey = `${year - 1}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const priorYearEnd = map.get(priorYearEndKey);
+        const priorSame = map.get(priorSameKey);
+        const out = { ...row };
+        flowCols.forEach(col => {
+            const curr = Number(row[col] || 0);
+            if (priorYearEnd && priorSame) {
+                out[col] = curr + Number(priorYearEnd[col] || 0) - Number(priorSame[col] || 0);
+            } else {
+                out[col] = null;
+            }
+        });
+        return out;
+    });
+}
+
+function ffill(rows, col) {
+    let last = null;
+    rows.forEach(r => {
+        if (r[col] !== null && r[col] !== undefined && !isNaN(r[col])) {
+            last = r[col];
+        } else if (last !== null) {
+            r[col] = last;
+        }
+    });
+}
+
+function calculateDerived(rows) {
+    rows.forEach(r => {
+        if (!r) return;
+        const get = (k) => (r[k] !== null && r[k] !== undefined && !isNaN(r[k])) ? Number(r[k]) : 0;
+        const setIfMissing = (k, v = 0) => {
+            if (r[k] === null || r[k] === undefined || isNaN(r[k])) r[k] = v;
+        };
+
+        // Basic fills
+        ['Total_Equity','Total_Assets','Total_Liabilities','Total_Current_Assets','Total_Current_Liabilities'].forEach(c => setIfMissing(c, null));
+    });
+
+    ['Total_Equity','Total_Assets','Total_Liabilities','Total_Current_Assets','Total_Current_Liabilities'].forEach(c => ffill(rows, c));
+
+    rows.forEach((r, idx) => {
+        const prev = idx > 0 ? rows[idx - 1] : null;
+        const get = (k) => (r[k] !== null && r[k] !== undefined && !isNaN(r[k])) ? Number(r[k]) : 0;
+        const getPrev = (k) => (prev && prev[k] !== null && prev[k] !== undefined && !isNaN(prev[k])) ? Number(prev[k]) : 0;
+        const getOrNull = (k) => (r[k] !== null && r[k] !== undefined && !isNaN(r[k])) ? Number(r[k]) : null;
+
+        // Debt & Cash
+        r.Total_Short_Term_Borrowings = get('Short_Term_Debt') + get('Current_Portion_LT_Debt');
+        r.Total_Debt = r.Total_Short_Term_Borrowings + get('Long_Term_Debt') + get('Bonds_Payable');
+        r.Total_Cash = get('Cash_Equivalents') + get('Short_Term_Investments');
+        r.Net_Debt = r.Total_Debt - r.Total_Cash;
+
+        const marketCapVal = (r.Market_Cap !== null && r.Market_Cap !== undefined && !isNaN(r.Market_Cap) && Number(r.Market_Cap) > 0)
+            ? Number(r.Market_Cap)
+            : null;
+        const totalEquityVal = getOrNull('Total_Equity');
+        const totalAssetsVal = getOrNull('Total_Assets');
+        const ocfVal = getOrNull('OCF');
+
+        // Enterprise Value (avoid negative from missing Market Cap)
+        r.EV = marketCapVal !== null
+            ? marketCapVal + r.Total_Debt - r.Total_Cash + get('Minority_Interest')
+            : null;
+
+        // Income Statement metrics
+        r.Other_Revenue = get('Other_Business_Revenue');
+        r.Main_Revenue = get('Revenue') - r.Other_Revenue;
+        r.Gross_Profit = get('Revenue') - get('COGS');
+        r.SGA_Exp = get('Selling_Exp') + get('Admin_Exp');
+        r.Operating_Expenses = get('Selling_Exp') + get('Admin_Exp') + get('RD_Exp');
+        r.Other_Operating_Exp = get('Taxes_Surcharges');
+        r.EBIT = r.Gross_Profit - get('Selling_Exp') - get('Admin_Exp') - get('RD_Exp');
+        r.DA_Estimated = get('Revenue') * 0.015;
+        r.EBITDA = r.EBIT + r.DA_Estimated;
+        r.Net_Interest_Exp = get('Fin_Exp') * -1;
+        r.Interest_And_Investment_Income = get('Interest_Inc') + get('Investment_Income');
+        r.Non_Operating_Net = get('Non_Operating_Income') - get('Non_Operating_Exp');
+        r.Gain_On_Asset_Sale = get('Asset_Disposal_Gain') + get('NonCurrent_Asset_Disposal_Gain') - get('NonCurrent_Asset_Disposal_Loss');
+        r.Gain_On_Investment_Sale = get('Investment_Income');
+        r.Total_Impairment = get('Asset_Impairment') + get('Credit_Impairment');
+        r.Other_Unusual_Items = get('Other_Income') + get('FV_Change_Income');
+        r.EBT_Excl_Unusual = r.EBIT + r.Net_Interest_Exp;
+        r.EBT_Incl_Unusual = get('Pretax_Income');
+        r.Earnings_Continuing = get('Net_Income');
+        r.Net_Income_Common = get('Net_Income_Parent') || get('Net_Income');
+
+        // Margins
+        const revSafe = get('Revenue') || null;
+        r.Gross_Margin = revSafe ? r.Gross_Profit / revSafe : null;
+        r.Operating_Margin = revSafe ? get('Operating_Income') / revSafe : null;
+        r.EBITDA_Margin = revSafe ? r.EBITDA / revSafe : null;
+        r.EBIT_Margin = revSafe ? r.EBIT / revSafe : null;
+        r.EBT_Margin = revSafe ? get('Pretax_Income') / revSafe : null;
+        r.EBT_Excl_Unusual_Margin = revSafe ? r.EBT_Excl_Unusual / revSafe : null;
+        r.SGA_Margin = revSafe ? r.SGA_Exp / revSafe : null;
+        r.Net_Margin = revSafe ? get('Net_Income') / revSafe : null;
+        r.Net_Avail_Common_Margin = revSafe ? r.Net_Income_Common / revSafe : null;
+        r.Normalized_Net_Income = get('Net_Income') - r.Total_Impairment - r.Other_Unusual_Items - r.Gain_On_Asset_Sale;
+        r.Normalized_Net_Income_Margin = revSafe ? r.Normalized_Net_Income / revSafe : null;
+
+        // Working Capital
+        r.Working_Capital = get('Total_Current_Assets') - get('Total_Current_Liabilities');
+        r.Working_Capital_Change = r.Working_Capital - (prev ? (getPrev('Working_Capital') || 0) : 0);
+        r.Adj_OCF = ocfVal !== null ? (ocfVal + r.Working_Capital_Change) : null;
+
+        // Changes in components
+        r.AR_Total = (get('Accounts_Receivable') || get('Notes_AR_Combined'));
+        r.AP_Total = (get('Accounts_Payable') || get('Notes_AP_Combined'));
+        r.Change_In_AR = -(r.AR_Total - (prev ? getPrev('AR_Total') : 0));
+        r.Change_In_Inventory = -(get('Inventory') - (prev ? getPrev('Inventory') : 0));
+        r.Change_In_AP = (r.AP_Total - (prev ? getPrev('AP_Total') : 0));
+        r.Change_In_Prepaid = -(get('Prepaid_Expenses') - (prev ? getPrev('Prepaid_Expenses') : 0));
+        r.Change_In_Other_Receivables = -(get('Other_Receivables') - (prev ? getPrev('Other_Receivables') : 0));
+        r.Change_In_Other_Payables = (get('Other_Payables') - (prev ? getPrev('Other_Payables') : 0));
+        r.Change_In_Unearned = (get('Unearned_Revenue') + get('Contract_Liabilities')) - (prev ? (getPrev('Unearned_Revenue') + getPrev('Contract_Liabilities')) : 0);
+
+        // Balance Sheet derived
+        r.Total_Receivables = (get('Accounts_Receivable') + get('Notes_Receivable') + get('Financing_Receivables')) || get('Notes_AR_Combined');
+        r.CIP = get('Construction_In_Progress_Total') || get('Construction_In_Progress');
+        r.Total_PPE_Koyfin = get('Net_PPE') + r.CIP;
+        r.Unearned_Revenue_Total = get('Unearned_Revenue') + get('Contract_Liabilities');
+        r.Unearned_Revenue_NonCurrent = get('LT_Deferred_Revenue');
+        r.Other_Receivables_Final = get('Other_Receivables_Total') || get('Other_Receivables');
+        r.Common_Equity = get('Equity_Parent') || (get('Total_Equity') - get('Minority_Interest'));
+        r.Total_Capital = get('Total_Equity') + r.Total_Debt;
+        r.Tangible_Book_Value = get('Total_Equity') - get('Goodwill') - get('Intangible_Assets');
+        r.Adj_Equity = totalEquityVal !== null
+            ? (totalEquityVal + Math.abs(get('Treasury_Stock')) + Math.abs(r.Common_Dividends_Paid || 0))
+            : null;
+
+        // Shares
+        r.Shares_Outstanding = get('EPS') ? (get('Net_Income') / get('EPS')) : null;
+        r.Book_Value_Per_Share = r.Shares_Outstanding ? (get('Total_Equity') / r.Shares_Outstanding) : null;
+        r.Tangible_BV_Per_Share = r.Shares_Outstanding ? (r.Tangible_Book_Value / r.Shares_Outstanding) : null;
+
+        // Returns
+        r.ROE = get('Total_Equity') ? (get('Net_Income') / get('Total_Equity')) : null;
+        r.ROA = get('Total_Assets') ? (get('Net_Income') / get('Total_Assets')) : null;
+        r.Return_On_Capital = r.Total_Capital ? (get('Net_Income') / r.Total_Capital) : null;
+        r.Return_On_Common_Equity = r.Common_Equity ? (r.Net_Income_Common / r.Common_Equity) : null;
+
+        // ROIC
+        r.NOPAT = r.EBIT - get('Income_Tax_Exp');
+        r.Invested_Capital = r.Total_Debt + get('Total_Equity') + get('Lease_Liabilities');
+        r.Avg_Invested_Capital = (r.Invested_Capital + (prev ? getPrev('Invested_Capital') : 0)) / 2;
+        r.ROIC = r.Avg_Invested_Capital ? (r.NOPAT / r.Avg_Invested_Capital) : null;
+
+        // Multiples
+        r.PE = (marketCapVal && get('Net_Income')) ? (marketCapVal / get('Net_Income')) : null;
+        r.PS = (marketCapVal && get('Revenue')) ? (marketCapVal / get('Revenue')) : null;
+        r.PB = (marketCapVal && get('Total_Equity')) ? (marketCapVal / get('Total_Equity')) : null;
+        r.P_TangibleBV = (marketCapVal && r.Tangible_Book_Value) ? (marketCapVal / r.Tangible_Book_Value) : null;
+        r.EV_Sales = get('Revenue') ? (r.EV / get('Revenue')) : null;
+        r.EV_EBITDA = r.EBITDA ? (r.EV / r.EBITDA) : null;
+        r.EV_EBIT = r.EBIT ? (r.EV / r.EBIT) : null;
+
+        // Cash flow
+        r.Total_PPE = get('Net_PPE') + get('Construction_In_Progress');
+        r.DA_From_Accum = get('Accumulated_Depreciation') - (prev ? getPrev('Accumulated_Depreciation') : 0);
+        r.DA_From_PPE = (prev ? getPrev('Total_PPE') : 0) + Math.abs(get('CapEx')) - r.Total_PPE;
+        r.DA = r.DA_From_Accum > 0 ? r.DA_From_Accum : r.DA_From_PPE;
+        r.DA = (r.DA !== null && r.DA > 0) ? r.DA : r.DA_Estimated;
+        r.Depreciation = r.DA_From_Accum > 0 ? r.DA_From_Accum : 0;
+        r.Amortization = Math.max(0, r.DA - r.Depreciation);
+        r.EBITA = r.EBIT + r.Amortization;
+        r.EBITA_Margin = revSafe ? (r.EBITA / revSafe) : null;
+        r.EBITDA = r.EBIT + r.DA;
+        r.FCF = get('OCF') - Math.abs(get('CapEx'));
+        r.FCF_Per_Share = r.Shares_Outstanding ? (r.FCF / r.Shares_Outstanding) : null;
+        r.FCF_Yield = marketCapVal ? (r.FCF / marketCapVal) : null;
+        r.EV_OCF = get('OCF') ? (r.EV / get('OCF')) : null;
+        r.Total_Debt_Issued = get('Proceeds_From_Borrowings') + get('Bond_Issuance');
+        r.Total_Debt_Repaid = get('Repayment_Of_Debt');
+        r.Net_Debt_Issued = r.Total_Debt_Issued - Math.abs(r.Total_Debt_Repaid);
+        r.Common_Dividends_Paid = get('Dividends_Paid') - Math.abs(get('Minority_Dividends_Paid'));
+        r.Dividends_to_MktCap = marketCapVal ? (Math.abs(r.Common_Dividends_Paid || 0) / marketCapVal) : null;
+        r.Dividends_to_OCF = ocfVal ? (Math.abs(r.Common_Dividends_Paid || 0) / Math.abs(ocfVal)) : null;
+        r.Other_Operating_Activities = get('Other_Operating_Cash_In') - Math.abs(get('Other_Operating_Cash_Out'));
+        r.Other_Investing_Activities = get('Other_Investing_Cash_In') - Math.abs(get('Other_Investing_Cash_Out'));
+        r.Other_Financing_Activities = get('Other_Financing_Cash_In') - Math.abs(get('Other_Financing_Cash_Out'));
+        r.Investment_In_Securities = get('Cash_For_Investments') - get('Proceeds_From_Investment_Sales');
+
+        // Model100 Valuation extras
+        r.Op_CF_Assets = (ocfVal !== null && totalAssetsVal) ? (ocfVal / totalAssetsVal) : null;
+        r.Op_CF_EV = (ocfVal !== null && r.EV) ? (ocfVal / r.EV) : null;
+        // GAP = (Adj_OCF * (ROIC*100 + 5) - Minority_Interest + Cash - Debt) / Mkt Cap
+        const adjOcfForGap = r.Adj_OCF || 0;
+        const roicForGap = r.ROIC || 0;
+        const minorityForGap = get('Minority_Interest') || 0;
+        const cashForGap = get('Cash_Equivalents') || 0;
+        const debtForGap = r.Total_Debt || 0;
+        r.Gap = (marketCapVal && marketCapVal !== 0)
+            ? (adjOcfForGap * (roicForGap * 100 + 5) - minorityForGap + cashForGap - debtForGap) / marketCapVal
+            : null;
+        r.MktCap_to_Equity = (marketCapVal !== null && totalEquityVal) ? (marketCapVal / totalEquityVal) : null;
+
+        // Solvency
+        r.Debt_to_Equity = get('Total_Equity') ? (r.Total_Debt / get('Total_Equity')) : null;
+        r.Debt_to_Capital = r.Total_Capital ? (r.Total_Debt / r.Total_Capital) : null;
+        r.LT_Debt_to_Equity = get('Total_Equity') ? (get('Long_Term_Debt') / get('Total_Equity')) : null;
+        r.LT_Debt_to_Capital = r.Total_Capital ? (get('Long_Term_Debt') / r.Total_Capital) : null;
+        r.Liabilities_to_Assets = get('Total_Assets') ? (get('Total_Liabilities') / get('Total_Assets')) : null;
+        r.Interest_Coverage_EBIT = get('Interest_Exp') ? (r.EBIT / get('Interest_Exp')) : null;
+        r.Interest_Coverage_EBITDA = get('Interest_Exp') ? (r.EBITDA / get('Interest_Exp')) : null;
+        r.Interest_Coverage_EBITDA_CapEx = get('Interest_Exp') ? ((r.EBITDA - Math.abs(get('CapEx'))) / get('Interest_Exp')) : null;
+        r.Debt_to_EBITDA = r.EBITDA ? (r.Total_Debt / r.EBITDA) : null;
+        r.Net_Debt_to_EBITDA = r.EBITDA ? (r.Net_Debt / r.EBITDA) : null;
+        r.Current_Ratio = get('Total_Current_Liabilities') ? (get('Total_Current_Assets') / get('Total_Current_Liabilities')) : null;
+        r.Quick_Ratio = get('Total_Current_Liabilities') ? ((get('Total_Current_Assets') - get('Inventory')) / get('Total_Current_Liabilities')) : null;
+        r.Operating_Cash_Flow_to_Current_Liabilities = get('Total_Current_Liabilities') ? (get('OCF') / get('Total_Current_Liabilities')) : null;
+
+        // Altman Z-Score (Original formula for manufacturing)
+        // Z = 1.2*X1 + 1.4*X2 + 3.3*X3 + 0.6*X4 + 1.0*X5
+        // X1 = Working Capital / Total Assets
+        // X2 = Retained Earnings / Total Assets
+        // X3 = EBIT / Total Assets
+        // X4 = Market Value of Equity / Total Liabilities
+        // X5 = Sales / Total Assets
+        const totalAssetsZ = get('Total_Assets');
+        const totalLiabilitiesZ = get('Total_Liabilities');
+        const Z_X1 = totalAssetsZ ? (r.Working_Capital / totalAssetsZ) : null;
+        const Z_X2 = totalAssetsZ ? (get('Retained_Earnings') / totalAssetsZ) : null;
+        const Z_X3 = totalAssetsZ ? (r.EBIT / totalAssetsZ) : null;
+        const Z_X4 = (marketCapVal && totalLiabilitiesZ) ? (marketCapVal / totalLiabilitiesZ) : null;
+        const Z_X5 = totalAssetsZ ? (get('Revenue') / totalAssetsZ) : null;
+        r.Altman_Z_Score = (Z_X1 !== null && Z_X2 !== null && Z_X3 !== null && Z_X4 !== null && Z_X5 !== null) ?
+            (1.2 * Z_X1 + 1.4 * Z_X2 + 3.3 * Z_X3 + 0.6 * Z_X4 + 1.0 * Z_X5) : null;
+
+        // Turnovers
+        const avgReceivables = (r.Total_Receivables + (prev ? getPrev('Total_Receivables') : r.Total_Receivables)) / 2;
+        const avgInventory = (get('Inventory') + (prev ? getPrev('Inventory') : get('Inventory'))) / 2;
+        const avgAssets = (get('Total_Assets') + (prev ? getPrev('Total_Assets') : get('Total_Assets'))) / 2;
+        const avgFixed = (r.Total_PPE_Koyfin + (prev ? getPrev('Total_PPE_Koyfin') : r.Total_PPE_Koyfin)) / 2;
+        const avgPayables = (r.AP_Total + (prev ? getPrev('AP_Total') : r.AP_Total)) / 2;
+        r.Receivables_Turnover = avgReceivables ? (get('Revenue') / avgReceivables) : null;
+        r.Fixed_Assets_Turnover = avgFixed ? (get('Revenue') / avgFixed) : null;
+        r.Inventory_Turnover = avgInventory ? (get('COGS') / avgInventory) : null;
+        r.Asset_Turnover = avgAssets ? (get('Revenue') / avgAssets) : null;
+        r.Days_Outstanding_Inventory = r.Inventory_Turnover ? (365 / r.Inventory_Turnover) : null;
+        r.Days_Sales_Outstanding = r.Receivables_Turnover ? (365 / r.Receivables_Turnover) : null;
+        r.Days_Payable_Outstanding = avgPayables ? (365 / (get('COGS') / avgPayables)) : null;
+        r.Cash_Conversion_Cycle = (r.Days_Sales_Outstanding || 0) + (r.Days_Outstanding_Inventory || 0) - (r.Days_Payable_Outstanding || 0);
+    });
+
+    return rows;
+}
+
+function addYoY(rows, isLtm) {
+    const periods = isLtm ? 4 : 1;
+    rows.forEach((r, idx) => {
+        const prev = rows[idx - periods];
+        const pct = (curr, prevVal) => (prevVal ? (curr - prevVal) / prevVal : null);
+        if (prev) {
+            r.Rev_YoY = pct(r.Revenue, prev.Revenue);
+            r.Gross_Profit_YoY = pct(r.Gross_Profit, prev.Gross_Profit);
+            r.EBITDA_YoY = pct(r.EBITDA, prev.EBITDA);
+            r.NetInc_YoY = pct(r.Net_Income, prev.Net_Income);
+            r.EPS_YoY = pct(r.EPS, prev.EPS);
+            r.OCF_YoY = pct(r.OCF, prev.OCF);
+            r.CapEx_YoY = pct(r.CapEx, prev.CapEx);
+            r.Total_Debt_YoY = pct(r.Total_Debt, prev.Total_Debt);
+            r.Total_Assets_YoY = pct(r.Total_Assets, prev.Total_Assets);
+            r.Total_Equity_YoY = pct(r.Total_Equity, prev.Total_Equity);
+            r.Adj_OCF_YoY = pct(r.Adj_OCF, prev.Adj_OCF);
+        }
+    });
+    return rows;
+}
+
+function attachMarketCap(rows, marketCaps) {
+    if (!marketCaps || marketCaps.length === 0) return rows;
+    const caps = marketCaps
+        .filter(r => r.date && isFinite(r.cap))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+    let i = 0;
+    rows.forEach(row => {
+        const date = new Date(row.report_date);
+        while (i + 1 < caps.length && new Date(caps[i + 1].date) <= date) i += 1;
+        row.Market_Cap = caps[i] ? caps[i].cap : null;
+    });
+    return rows;
+}
+
+async function loadDataFromSupabase(symbol) {
+    const container = document.getElementById('table-box');
+    container.innerHTML = '<div class="loading">Loading data...</div>';
+
+    const cached = dataCache.get(symbol);
+    if (cached) {
+        return cached;
+    }
+
+    const records = await fetchAllFinancials(symbol);
+    // Load market cap from Supabase first, fallback to CSV if not available
+    let marketCaps = await fetchMarketCapHistory(symbol);
+    if (!marketCaps.length) {
+        console.log('No market cap data in Supabase, trying CSV...');
+        marketCaps = await loadMarketCapFromCsv(symbol);
+    } else {
+        console.log(`Loaded ${marketCaps.length} market cap records from Supabase`);
+    }
+    let rows = buildWideRows(records);
+    rows = attachMarketCap(rows, marketCaps);
+
+    const annual = rows.filter(r => r.report_date && r.report_date.endsWith('-12-31'));
+    const ltm = computeLtmRows(rows);
+
+    const result = {
+        annual: addYoY(calculateDerived(annual), false),
+        ltm: addYoY(calculateDerived(ltm), true)
+    };
+    dataCache.set(symbol, result);
+
+    console.log(`Loaded LTM: ${result.ltm.length} rows, Annual: ${result.annual.length} rows`);
+    return result;
+}
+
+async function loadData() {
+    try {
+        showProgress();
+        console.log("Loading data from Supabase...");
+        
+        updateProgress(5, '初始化...');
+        await setupCompanySearch();
+        
+        updateProgress(10, '财务数据...');
+        const symbol = normalizeSymbol(document.getElementById('company-search-input').value);
+        const result = await loadDataFromSupabase(symbol);
+        rawData.annual = result.annual;
+        rawData.ltm = result.ltm;
+        updateProgress(40);
+        
+        // 加载股东数据
+        updateProgress(50, '股东数据...');
+        holdersData = await fetchHoldersData(symbol);
+        holdersDataLoaded = true;
+        console.log(`Loaded holders data: ${holdersData.length} rows`);
+        
+        // 加载 TOP 10 股东数据
+        updateProgress(60, '十大股东...');
+        top10ShareholdersData = await fetchTop10ShareholdersData(symbol);
+        top10DataLoaded = true;
+        console.log(`Loaded top10 shareholders data: ${top10ShareholdersData.length} rows`);
+
+        // 加载 News 数据
+        updateProgress(70, '新闻数据...');
+        newsDataLoaded = false;
+        newsData = await fetchNewsData(symbol);
+        newsDataLoaded = true;
+        console.log(`Loaded news data: ${newsData.length} rows`);
+
+        // 加载市场指数数据
+        updateProgress(80, '市场指数...');
+        marketIndexDataLoaded = false;
+        marketIndexData = await fetchMarketIndexHistory();
+        marketIndexDataLoaded = true;
+        console.log(`Loaded market index data: ${marketIndexData.length} rows`);
+        
+        updateProgress(90, '公司信息...');
+        await updateCompanyInfo(symbol);
+
+        updateProgress(95, '渲染中...');
+        render();
+        runValidationChecks();
+        
+        hideProgress();
+    } catch (err) {
+        hideProgress();
+        console.error("Error loading data:", err);
+        document.getElementById('table-box').innerHTML = `
+            <div class="loading" style="color:red; text-align:left; padding:20px;">
+                <strong>Error loading data:</strong><br><br>
+                ${err.message}<br><br>
+                <small>Please ensure:<br>
+                1. You are viewing this page through http://localhost:8000/<br>
+                2. Supabase is reachable<br>
+                3. Your browser console (F12) for more details</small>
+            </div>`;
+    }
+}
+
+async function runValidationChecks() {
+    if (!VALIDATION_MODE) return;
+    const validationKeys = ['Revenue', 'OCF', 'Total_Assets', 'EV', 'ROIC'];
+    const latestAnnual = [...rawData.annual].sort((a, b) => new Date(b.report_date) - new Date(a.report_date))[0];
+    const latestLtm = [...rawData.ltm].sort((a, b) => new Date(b.report_date) - new Date(a.report_date))[0];
+    if (!latestAnnual || !latestLtm) return;
+
+    const loadCsv = async (path) => {
+        const res = await fetch(path);
+        const text = await res.text();
+        const parsed = Papa.parse(text, { header: true, dynamicTyping: true, skipEmptyLines: true });
+        return parsed.data || [];
+    };
+
+    try {
+        const annualCsv = await loadCsv('outputs/002508_analysis/annual_metrics.csv');
+        const ltmCsv = await loadCsv('outputs/002508_analysis/ltm_metrics.csv');
+        const annualRow = annualCsv.find(r => parseReportDate(r.report_date) === latestAnnual.report_date);
+        const ltmRow = ltmCsv.find(r => parseReportDate(r.report_date) === latestLtm.report_date);
+        if (!annualRow || !ltmRow) return;
+
+        const compare = (label, row, csvRow) => {
+            const table = validationKeys.map(key => {
+                const supaVal = Number(row[key]);
+                const csvVal = Number(csvRow[key]);
+                const diffPct = (csvVal && !isNaN(csvVal)) ? ((supaVal - csvVal) / csvVal) * 100 : null;
+                return { metric: key, supabase: supaVal, csv: csvVal, diffPct };
+            });
+            console.group(`Validation ${label} (${row.report_date})`);
+            console.table(table);
+            console.groupEnd();
+        };
+
+        compare('Annual', latestAnnual, annualRow);
+        compare('LTM', latestLtm, ltmRow);
+    } catch (err) {
+        console.warn('Validation failed:', err);
+    }
+}
+
+async function checkSymbolDataExists(symbol) {
+    if (!symbol) return false;
+    try {
+        const { count, error } = await supabaseClient
+            .from('company_financials_long')
+            .select('symbol', { count: 'exact', head: true })
+            .eq('symbol', symbol)
+            .limit(1);
+        if (error) {
+            console.warn('Symbol data check failed:', error.message);
+            return false;
+        }
+        return (count || 0) > 0;
+    } catch (err) {
+        console.warn('Symbol data check error:', err);
+        return false;
+    }
+}
+
+function setDownloadStatus(message, isError = false) {
+    const el = document.getElementById('download-status');
+    if (!el) return;
+    el.textContent = message || '';
+    el.classList.toggle('error', Boolean(isError));
+}
+
+async function triggerDataDownload(symbol) {
+    const payload = { symbol };
+    const url = 'http://localhost:8000/akshare/fetch';
+    const TIMEOUT_MS = 600000; // 10 minutes
+
+    setDownloadStatus(`正在下载 ${symbol} 数据...`);
+    updateProgress(10, `下载 ${symbol}...`);
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    
+    // 模拟下载进度（因为实际请求是阻塞的）
+    let progressValue = 10;
+    const progressInterval = setInterval(() => {
+        progressValue = Math.min(progressValue + 1, 18);
+        updateProgress(progressValue, `下载中 ${symbol}...`);
+    }, 3000);
+    
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        clearInterval(progressInterval);
+        
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(text || `HTTP ${res.status}`);
+        }
+        const data = await res.json().catch(() => ({}));
+        if (data && data.message) {
+            setDownloadStatus(data.message);
+        } else {
+            setDownloadStatus(`下载完成！`);
+        }
+        updateProgress(19, '下载完成');
+        return true;
+    } catch (err) {
+        clearTimeout(timeoutId);
+        clearInterval(progressInterval);
+        if (err.name === 'AbortError') {
+            setDownloadStatus(`下载超时（超过10分钟），请检查终端日志`, true);
+            updateProgress(0, '超时');
+        } else {
+            setDownloadStatus(
+                `下载失败！请在终端运行: python scripts/fetch_stock_data.py --symbol=${symbol} && python scripts/upload_stock_data.py --symbol=${symbol}`,
+                true
+            );
+            updateProgress(0, '失败');
+        }
+        console.warn('Download trigger failed:', err);
+        return false;
+    }
+}
+
+async function setupCompanySearch() {
+    try {
+        const input = document.getElementById('company-search-input');
+        input.addEventListener('input', () => handleCompanyInput(input.value));
+        input.addEventListener('change', async () => {
+            try {
+                showProgress();
+                const symbol = normalizeSymbol(input.value);
+                
+                updateProgress(5, '检查数据...');
+                const exists = await checkSymbolDataExists(symbol);
+                if (!exists) {
+                    hideProgress();
+                    const proceed = window.confirm(`${symbol} 数据不存在，需要从服务器下载（约5-8分钟）。\n\n确保后端服务已启动：node scripts/akshare_fetch_server.js\n\n是否开始下载？`);
+                    if (!proceed) {
+                        setDownloadStatus('已取消下载');
+                        return;
+                    }
+                    showProgress();
+                    const downloadSuccess = await triggerDataDownload(symbol);
+                    if (!downloadSuccess) {
+                        hideProgress();
+                        return;
+                    }
+                }
+                
+                updateProgress(20, '财务数据...');
+                const result = await loadDataFromSupabase(symbol);
+                rawData.annual = result.annual;
+                rawData.ltm = result.ltm;
+                updateProgress(40);
+                
+                // 重新加载股东数据
+                updateProgress(50, '股东数据...');
+                holdersData = await fetchHoldersData(symbol);
+                holdersDataLoaded = true;
+                
+                // 重新加载 TOP 10 股东数据
+                updateProgress(60, '十大股东...');
+                top10ShareholdersData = await fetchTop10ShareholdersData(symbol);
+                top10DataLoaded = true;
+
+                // 重新加载 News 数据
+                updateProgress(70, '新闻数据...');
+                newsDataLoaded = false;
+                newsData = await fetchNewsData(symbol);
+                newsDataLoaded = true;
+
+                // 重新加载市场指数数据
+                updateProgress(80, '市场指数...');
+                marketIndexDataLoaded = false;
+                marketIndexData = await fetchMarketIndexHistory();
+                marketIndexDataLoaded = true;
+                
+                updateProgress(90, '公司信息...');
+                await updateCompanyInfo(input.value);
+                
+                updateProgress(95, '渲染中...');
+                render();
+                
+                hideProgress();
+            } catch (err) {
+                hideProgress();
+                console.error('Error switching symbol:', err);
+            }
+        });
+        input.addEventListener('blur', () => updateCompanyInfo(input.value));
+        companyLookupLoaded = true;
+        handleCompanyInput(input.value);
+    } catch (err) {
+        console.warn('Failed to setup company search:', err);
+        companyLookupLoaded = false;
+    }
+}
+
+function handleCompanyInput(val) {
+    if (companySearchTimer) clearTimeout(companySearchTimer);
+    companySearchTimer = setTimeout(async () => {
+        await fetchCompanySuggestions(val);
+        await updateCompanyInfo(val);
+    }, 250);
+}
+
+async function fetchCompanySuggestions(query) {
+    const q = normalizeSymbol(query);
+    const datalist = document.getElementById('company-symbols');
+    datalist.innerHTML = '';
+    if (!q) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('company_list')
+            .select('symbol,market')
+            .eq('market', 'cn')
+            .ilike('symbol', `%${q}%`)
+            .limit(20);
+        if (error) {
+            console.warn('Company list query failed', error.message);
+            return;
+        }
+        companySuggestions = data || [];
+        companySuggestions.forEach(r => {
+            const option = document.createElement('option');
+            option.value = String(r.symbol || '').toUpperCase();
+            datalist.appendChild(option);
+        });
+    } catch (err) {
+        console.warn('Company suggestion error', err);
+    }
+}
+
+function setView(view, btn) {
+    currentView = view;
+    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+}
+
+function downloadDataAsCsv() {
+    const symbol = document.getElementById('symbol-input').value.trim();
+    if (!symbol) {
+        alert('请先输入股票代码');
+        return;
+    }
+    const cached = dataCache.get(symbol);
+    if (!cached) {
+        alert('没有可下载的数据，请先搜索股票');
+        return;
+    }
+    
+    const data = currentView === 'ltm' ? cached.ltm : cached.annual;
+    if (!data || data.length === 0) {
+        alert('当前视图没有数据');
+        return;
+    }
+    
+    // Get all unique keys from data
+    const allKeys = new Set();
+    data.forEach(row => Object.keys(row).forEach(k => allKeys.add(k)));
+    const headers = Array.from(allKeys).sort();
+    
+    // Build CSV content
+    let csv = headers.join(',') + '\n';
+    data.forEach(row => {
+        const values = headers.map(h => {
+            const val = row[h];
+            if (val === null || val === undefined) return '';
+            if (typeof val === 'string' && val.includes(',')) return `"${val}"`;
+            return val;
+        });
+        csv += values.join(',') + '\n';
+    });
+    
+    // Download
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${symbol}_${currentView}_data.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    
+    console.log(`Downloaded ${data.length} rows as ${link.download}`);
+}
+
+function setTab(tab, el) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    if (renderMode === 'all') remindScrollToSection(tab);
+    render();
+}
+
+function remindScrollToSection(tab) {
+    const id = `alltable_${tab}`;
+    const el = document.getElementById(id);
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function toggleSection(sectionId) {
+    collapsedSections[sectionId] = !collapsedSections[sectionId];
+    render();
+}
+
+function formatVal(val, format, metricKey) {
+    if (val === null || val === undefined || isNaN(val)) return '-';
+    
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    
+    if (format === 'pct') {
+        const pctVal = (val * 100).toFixed(1) + '%';
+        if (isNegative) return `<span class="val-negative">(${(absVal * 100).toFixed(1)}%)</span>`;
+        return `<span class="val-positive">${pctVal}</span>`;
+    }
+    
+    if (format === 'ratio') {
+        const ratioVal = val.toFixed(1) + 'x';
+        if (isNegative) return `(${absVal.toFixed(1)}x)`;
+        return ratioVal;
+    }
+    
+    if (format === 'decimal') {
+        return val.toFixed(1);
+    }
+    
+    // Default: monetary value with M suffix
+    let formatted;
+    if (absVal >= 1e9) {
+        formatted = (absVal / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+    } else if (absVal >= 1e6) {
+        formatted = (absVal / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+    } else if (absVal >= 1e3) {
+        formatted = (absVal / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+    } else {
+        formatted = absVal.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    }
+    
+    if (isNegative) return `<span class="val-negative">(${formatted})</span>`;
+    return formatted;
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (currentView === 'ltm') {
+        const month = d.getMonth() + 1;
+        const quarter = Math.ceil(month / 3);
+        return `${quarter}Q CY${d.getFullYear()}`;
+    }
+    return `CY ${d.getFullYear()}`;
+}
+
+function normalizeSymbol(input) {
+    if (!input) return '';
+    let s = String(input).trim().toUpperCase();
+    s = s.replace(/\\s+/g, '');
+    s = s.replace(/\\.SZ$|\\.SH$|\\.SS$/i, '');
+    return s;
+}
+
+function formatNumber(val, decimals = 2) {
+    if (val === null || val === undefined || isNaN(val)) return '-';
+    return Number(val).toFixed(decimals);
+}
+
+function formatPercent(val, decimals = 1) {
+    if (val === null || val === undefined || isNaN(val)) return '-';
+    return `${Number(val).toFixed(decimals)}%`;
+}
+
+async function updateCompanyInfo(inputVal) {
+    const symbol = normalizeSymbol(inputVal);
+    const infoEl = document.getElementById('company-info');
+    if (!companyLookupLoaded) {
+        infoEl.innerHTML = `
+            <div class="company-info-row">
+                <span class="info-item">公司：加载中或失败</span>
+                <span class="info-item">Sector：-</span>
+                <span class="info-item">Industry：-</span>
+                <span class="info-item">Market：-</span>
+            </div>
+            <div class="company-info-row">
+                <span class="info-item">EV：-</span>
+                <span class="info-item">Market Cap：-</span>
+                <span class="info-item">Beta 5Y：-</span>
+                <span class="info-item">Beta 1Y：-</span>
+                <span class="info-item">aOCF(TTM)/EV：-</span>
+                <span class="info-item">GAP：-</span>
+                <span class="info-item">Date：-</span>
+            </div>
+        `;
+        return;
+    }
+    if (!symbol) {
+        infoEl.innerHTML = `
+            <div class="company-info-row">
+                <span class="info-item">公司：-</span>
+                <span class="info-item">Sector：-</span>
+                <span class="info-item">Industry：-</span>
+                <span class="info-item">Market：-</span>
+            </div>
+            <div class="company-info-row">
+                <span class="info-item">EV：-</span>
+                <span class="info-item">Market Cap：-</span>
+                <span class="info-item">Beta 5Y：-</span>
+                <span class="info-item">Beta 1Y：-</span>
+                <span class="info-item">aOCF(TTM)/EV：-</span>
+                <span class="info-item">GAP：-</span>
+                <span class="info-item">Date：-</span>
+            </div>
+        `;
+        return;
+    }
+
+    let company = null;
+    let market = null;
+
+    try {
+        const { data: companyRows, error: companyErr } = await supabaseClient
+            .from('company_list')
+            .select('symbol,market,description,sector,industry,exchange')
+            .eq('symbol', symbol)
+            .eq('market', 'cn')
+            .limit(1);
+        if (companyErr) {
+            console.warn('Company lookup error', companyErr.message);
+        } else {
+            company = companyRows && companyRows[0];
+        }
+
+        const { data: marketRows, error: marketErr } = await supabaseClient
+            .from('share_a_market')
+            .select('symbol,enterprise_value,market_capitalization,beta_5_years,beta_1_year,cash_from_operating_activities_trailing_12_months,"return_on_invested_capital_%_trailing_12_months",download_date')
+            .eq('symbol', symbol)
+            .order('download_date', { ascending: false })
+            .limit(1);
+        if (marketErr) {
+            console.warn('Market lookup error', marketErr.message);
+        } else {
+            market = marketRows && marketRows[0];
+        }
+    } catch (err) {
+        console.warn('Company lookup error', err);
+    }
+
+    if (!company && !market) {
+        infoEl.innerHTML = `
+            <div class="company-info-row">
+                <span class="info-item">公司：-</span>
+                <span class="info-item">Sector：-</span>
+                <span class="info-item">Industry：-</span>
+                <span class="info-item">Market：-</span>
+            </div>
+            <div class="company-info-row">
+                <span class="info-item">EV：-</span>
+                <span class="info-item">Market Cap：-</span>
+                <span class="info-item">Beta 5Y：-</span>
+                <span class="info-item">Beta 1Y：-</span>
+                <span class="info-item">aOCF(TTM)/EV：-</span>
+                <span class="info-item">GAP：-</span>
+                <span class="info-item">Date：-</span>
+            </div>
+        `;
+        return;
+    }
+
+    const ev = market ? market.enterprise_value : null;
+    const mcap = market ? market.market_capitalization : null;
+    const beta5 = market ? market.beta_5_years : null;
+    const beta1 = market ? market.beta_1_year : null;
+    const ocf = market ? market.cash_from_operating_activities_trailing_12_months : null;
+    const ltmRows = (rawData && rawData.ltm) ? rawData.ltm : [];
+    const ltmLast = ltmRows.length ? ltmRows[ltmRows.length - 1] : null;
+    const adjOcfTtm = (ltmLast && isFinite(ltmLast.Adj_OCF))
+        ? Number(ltmLast.Adj_OCF)
+        : (ltmLast && isFinite(ltmLast.OCF) && isFinite(ltmLast.Working_Capital_Change))
+            ? (Number(ltmLast.OCF) + Number(ltmLast.Working_Capital_Change))
+            : null;
+    const aocfEvPct = (adjOcfTtm && ev) ? (adjOcfTtm / ev) * 100 : null;
+    // GAP = (Adj_OCF * (ROIC*100 + 5) - Minority_Interest + Cash - Debt) / Mkt Cap
+    // All financial data from LTM latest, Market Cap from mkt_cap table (via LTM data)
+    const roicTtm = (ltmLast && isFinite(ltmLast.ROIC)) ? Number(ltmLast.ROIC) : 0;
+    const minorityTtm = (ltmLast && isFinite(ltmLast.Minority_Interest)) ? Number(ltmLast.Minority_Interest) : 0;
+    const cashTtm = (ltmLast && isFinite(ltmLast.Cash_Equivalents)) ? Number(ltmLast.Cash_Equivalents) : 0;
+    const debtTtm = (ltmLast && isFinite(ltmLast.Total_Debt)) ? Number(ltmLast.Total_Debt) : 0;
+    // Use Market_Cap from LTM data (sourced from mkt_cap table)
+    const mktCapFromTable = (ltmLast && isFinite(ltmLast.Market_Cap)) ? Number(ltmLast.Market_Cap) : null;
+    const gapPct = (adjOcfTtm !== null && mktCapFromTable && mktCapFromTable !== 0)
+        ? ((adjOcfTtm * (roicTtm * 100 + 5) - minorityTtm + cashTtm - debtTtm) / mktCapFromTable) * 100
+        : null;
+
+    infoEl.innerHTML = `
+        <div class="company-info-row">
+            <span class="info-item">公司：${(company && company.description) || '-'}</span>
+            <span class="info-item">Sector：${(company && company.sector) || '-'}</span>
+            <span class="info-item">Industry：${(company && company.industry) || '-'}</span>
+            <span class="info-item">Market：${(company && company.market) || '-'}</span>
+        </div>
+        <div class="company-info-row">
+            <span class="info-item">EV：${formatVal(ev)}</span>
+            <span class="info-item">Market Cap：${formatVal(mcap)}</span>
+            <span class="info-item">Beta 5Y：${formatNumber(beta5)}</span>
+            <span class="info-item">Beta 1Y：${formatNumber(beta1)}</span>
+            <span class="info-item">aOCF(TTM)/EV：${formatPercent(aocfEvPct, 1)}</span>
+            <span class="info-item">GAP：${formatPercent(gapPct, 0)}</span>
+            <span class="info-item">Date：${(market && market.download_date) || '-'}</span>
+        </div>
+    `;
+}
+
+function render() {
+    // 12张表模式：一次性渲染所有表
+    if (renderMode === 'all') {
+        renderAllTables();
+        return;
+    }
+
+    // 如果是 Holders 标签页，使用特殊渲染
+    if (currentTab === 'Holders') {
+        renderHolders();
+        return;
+    }
+    
+    // 如果是 Top10Shareholders 标签页，使用特殊渲染
+    if (currentTab === 'Top10Shareholders') {
+        renderTop10Shareholders();
+        return;
+    }
+
+    // 如果是 News 标签页，使用特殊渲染
+    if (currentTab === 'News') {
+        renderNews();
+        return;
+    }
+    
+    const data = [...rawData[currentView]].sort((a, b) => new Date(a.report_date) - new Date(b.report_date));
+    const sections = tabConfigs[currentTab];
+    const container = document.getElementById('table-box');
+    
+    if (!data.length) {
+        container.innerHTML = '<div class="loading">No data available</div>';
+        return;
+    }
+    
+    let html = '<table><thead><tr><th></th>';
+    data.forEach(row => html += `<th>${formatDate(row.report_date)}</th>`);
+    html += '</tr></thead><tbody>';
+
+    Object.entries(sections).forEach(([sectionName, metrics]) => {
+        const sectionId = `${currentTab}_${sectionName}`.replace(/\s/g, '_');
+        const isCollapsed = collapsedSections[sectionId];
+        const icon = isCollapsed ? '▶' : '▼';
+        
+        // Section header row
+        html += `<tr class="section-header" onclick="toggleSection('${sectionId}')">
+            <td><span class="toggle-icon">${icon}</span>${sectionName}</td>`;
+        data.forEach(() => html += '<td></td>');
+        html += '</tr>';
+        
+        // Metric rows
+        metrics.forEach(m => {
+            const classes = [];
+            if (isCollapsed) classes.push('row-hidden');
+            if (m.indent === 1) classes.push('indent-1');
+            if (m.indent === 2) classes.push('indent-2');
+            if (m.indent === 3) classes.push('indent-3');
+            if (m.bold) classes.push('metric-bold');
+            if (m.italic) classes.push('metric-italic');
+            
+            html += `<tr class="${classes.join(' ')}"><td>${m.label}</td>`;
+            data.forEach(row => {
+                const val = row[m.key];
+                html += `<td>${formatVal(val, m.format, m.key)}</td>`;
+            });
+            html += '</tr>';
+        });
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function renderStandardTableInto(tabKey, container) {
+    const data = [...rawData[currentView]].sort((a, b) => new Date(a.report_date) - new Date(b.report_date));
+    const sections = tabConfigs[tabKey];
+
+    if (!data.length) {
+        container.innerHTML = '<div class="loading">No data available</div>';
+        return;
+    }
+
+    if (!sections) {
+        container.innerHTML = '<div class="loading">No config for this tab</div>';
+        return;
+    }
+
+    let html = '<table><thead><tr><th></th>';
+    data.forEach(row => html += `<th>${formatDate(row.report_date)}</th>`);
+    html += '</tr></thead><tbody>';
+
+    Object.entries(sections).forEach(([sectionName, metrics]) => {
+        const sectionId = `${tabKey}_${sectionName}`.replace(/\s/g, '_');
+        const isCollapsed = collapsedSections[sectionId];
+        const icon = isCollapsed ? '▶' : '▼';
+
+        html += `<tr class="section-header" onclick="toggleSection('${sectionId}')">
+            <td><span class="toggle-icon">${icon}</span>${sectionName}</td>`;
+        data.forEach(() => html += '<td></td>');
+        html += '</tr>';
+
+        metrics.forEach(m => {
+            const classes = [];
+            if (isCollapsed) classes.push('row-hidden');
+            if (m.indent === 1) classes.push('indent-1');
+            if (m.indent === 2) classes.push('indent-2');
+            if (m.indent === 3) classes.push('indent-3');
+            if (m.bold) classes.push('metric-bold');
+            if (m.italic) classes.push('metric-italic');
+
+            html += `<tr class="${classes.join(' ')}"><td>${m.label}</td>`;
+            data.forEach(row => {
+                const val = row[m.key];
+                html += `<td>${formatVal(val, m.format, m.key)}</td>`;
+            });
+            html += '</tr>';
+        });
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function renderAllTables() {
+    const container = document.getElementById('table-box');
+
+    const tabNames = ['Highlights', 'IncomeStatement', 'BalanceSheet', 'CashFlow', 'Multiples', 'EnterpriseValue', 'Profitability', 'ROIC', 'Solvency', 'Holders', 'Top10Shareholders', 'News', 'Model100'];
+    const tabLabels = {
+        'Highlights': 'Highlights',
+        'IncomeStatement': 'Income Statement',
+        'BalanceSheet': 'Balance Sheet',
+        'CashFlow': 'Cash Flow',
+        'Multiples': 'Multiples',
+        'EnterpriseValue': 'Enterprise Value',
+        'Profitability': 'Profitability',
+        'ROIC': 'ROIC',
+        'Solvency': 'Solvency',
+        'Holders': 'Holders',
+        'Top10Shareholders': 'TOP 10 Shareholder',
+        'News': 'News',
+        'Model100': 'Model100'
+    };
+
+    // 生成容器骨架
+    container.innerHTML = `
+      <div class="all-tables">
+        ${tabNames.map(t => `
+          <div class="all-table-section" id="alltable_${t}">
+            <div class="all-table-title">${tabLabels[t] || t}</div>
+            <div class="table-wrapper all-table-wrapper" id="alltable_box_${t}">
+              <div class="loading">Loading...</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // 填充每张表
+    tabNames.forEach(t => {
+        const box = document.getElementById(`alltable_box_${t}`);
+        if (!box) return;
+
+        if (t === 'Holders') {
+            renderHolders(box, { charts: false }); // “表即可”，禁用图表
+            return;
+        }
+        if (t === 'Top10Shareholders') {
+            renderTop10Shareholders(box);
+            return;
+        }
+        if (t === 'News') {
+            renderNews(box);
+            return;
+        }
+
+        renderStandardTableInto(t, box);
+    });
+}
+
+function formatHolderVal(val, format) {
+    if (val === null || val === undefined || isNaN(val)) return '-';
+    
+    if (format === 'integer') {
+        return Math.round(val).toLocaleString();
+    }
+    if (format === 'decimal') {
+        return Number(val).toFixed(2);
+    }
+    if (format === 'pct_signed') {
+        const pctVal = Number(val).toFixed(1);
+        if (val > 0) return `<span class="val-positive">${pctVal}%</span>`;
+        if (val < 0) return `<span class="val-negative">${pctVal}%</span>`;
+        return `${pctVal}%`;
+    }
+    return String(val);
+}
+
+function getHolderCellClass(val, format) {
+    if (val === null || val === undefined || isNaN(val)) return '';
+    if (format === 'pct_signed') {
+        if (val > 10) return 'holder-strong-positive';
+        if (val > 0) return 'holder-positive';
+        if (val < -10) return 'holder-strong-negative';
+        if (val < 0) return 'holder-negative';
+    }
+    return '';
+}
+
+function renderHolders(containerOverride, options = {}) {
+    const container = containerOverride || document.getElementById('table-box');
+    
+    if (!holdersDataLoaded || !holdersData.length) {
+        container.innerHTML = '<div class="loading">股东数据加载中或无数据...</div>';
+        return;
+    }
+    
+    // 按日期倒序排列（最新在左边）
+    const data = [...holdersData].sort((a, b) => new Date(b.report_date) - new Date(a.report_date));
+    
+    // 计算派生指标
+    const processedData = data.map((row, idx) => {
+        const prev = data[idx + 1]; // 前一期（因为是倒序）
+        const holderCount = Number(row.current_holder_count) || 0;
+        const prevHolderCount = prev ? Number(prev.current_holder_count) : null;
+        const avgShares = Number(row.current_avg_shares) || 0;
+        const prevAvgShares = prev ? Number(prev.current_avg_shares) : null;
+        
+        // 从财务数据获取市值（如果可用）
+        const reportDate = row.report_date;
+        const financialRow = rawData.annual.find(r => r.report_date === reportDate) || 
+                            rawData.ltm.find(r => r.report_date === reportDate);
+        const marketCap = financialRow ? financialRow.Market_Cap : null;
+        const marketCapBillion = marketCap ? marketCap / 1e8 : null; // 转换为亿元
+        
+        // 计算市值变化率
+        const prevFinancialRow = prev ? (rawData.annual.find(r => r.report_date === prev.report_date) || 
+                                         rawData.ltm.find(r => r.report_date === prev.report_date)) : null;
+        const prevMarketCap = prevFinancialRow ? prevFinancialRow.Market_Cap : null;
+        const marketCapChangePct = (marketCap && prevMarketCap) ? 
+            ((marketCap - prevMarketCap) / prevMarketCap) * 100 : null;
+        
+        // 户均持股金额（万元）= 总市值 / 股东人数 / 10000
+        const avgAmountPerHolder = (marketCap && holderCount) ? 
+            (marketCap / holderCount) / 10000 : null;
+        const prevAvgAmount = (prevMarketCap && prevHolderCount) ?
+            (prevMarketCap / prevHolderCount) / 10000 : null;
+        const avgAmountChangePct = (avgAmountPerHolder && prevAvgAmount) ?
+            ((avgAmountPerHolder - prevAvgAmount) / prevAvgAmount) * 100 : null;
+        
+        // 查找对应的上证指数
+        // marketIndexData 是日线数据，需要找到 <= reportDate 的最近一天
+        let shIndex = null;
+        let shIndexChangePct = null;
+        
+        if (marketIndexData && marketIndexData.length) {
+            // marketIndexData 已经是按 date 升序排列
+            // 我们可以倒序查找第一个 date <= reportDate 的记录
+            let match = null;
+            for (let i = marketIndexData.length - 1; i >= 0; i--) {
+                if (marketIndexData[i].date <= reportDate) {
+                    match = marketIndexData[i];
+                    break;
+                }
+            }
+            if (match) {
+                shIndex = match.close;
+                
+                // 计算涨跌幅：与上一个报告期比较
+                if (prev) {
+                     let prevMatch = null;
+                     for (let i = marketIndexData.length - 1; i >= 0; i--) {
+                        if (marketIndexData[i].date <= prev.report_date) {
+                            prevMatch = marketIndexData[i];
+                            break;
+                        }
+                    }
+                    if (prevMatch && prevMatch.close) {
+                        shIndexChangePct = ((match.close - prevMatch.close) / prevMatch.close) * 100;
+                    }
+                }
+            }
+        }
+
+        return {
+            report_date: reportDate,
+            holder_count: holderCount,
+            holder_count_change_pct: Number(row.holder_count_change_pct) || null,
+            Market_Cap_Billion: marketCapBillion,
+            market_cap_change_pct: marketCapChangePct,
+            relative_strength: (marketCapChangePct !== null && shIndexChangePct !== null) ? (marketCapChangePct - shIndexChangePct) : null,
+            avg_shares_per_holder: avgAmountPerHolder,
+            avg_shares_change_pct: avgAmountChangePct || Number(row.avg_shares_change_pct) || null,
+            sh_index: shIndex,
+            sh_index_change_pct: shIndexChangePct
+        };
+    });
+    
+    const sections = tabConfigs['Holders'];
+    
+    // 格式化日期显示
+    const formatHolderDate = (dateStr) => {
+        if (!dateStr) return '';
+        const d = new Date(dateStr);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const day = d.getDate();
+        return `${year}/${month}/${day}`;
+    };
+    
+    let html = `
+        <style>
+            .holder-strong-positive { background-color: #c8e6c9 !important; }
+            .holder-positive { background-color: #e8f5e9 !important; }
+            .holder-strong-negative { background-color: #ffcdd2 !important; }
+            .holder-negative { background-color: #ffebee !important; }
+            .holders-charts-container { display: flex; flex-direction: column; gap: 18px; margin-top: 18px; }
+            .holders-chart {
+                padding: 14px 0 4px;
+                border-top: 4px solid var(--ft-line-strong);
+                border-bottom: 1px solid var(--border-color);
+                background: transparent;
+            }
+            .holders-chart .chart-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: var(--text-color);
+                margin: 0 0 8px 0;
+                padding: 0 6px;
+            }
+            .holders-chart canvas { width: 100%; height: 280px; }
+        </style>
+        <table><thead><tr><th></th>`;
+    
+    processedData.forEach(row => html += `<th>${formatHolderDate(row.report_date)}</th>`);
+    html += '</tr></thead><tbody>';
+
+    Object.entries(sections).forEach(([sectionName, metrics]) => {
+        const sectionId = `Holders_${sectionName}`.replace(/\s/g, '_');
+        const isCollapsed = collapsedSections[sectionId];
+        const icon = isCollapsed ? '▶' : '▼';
+        
+        html += `<tr class="section-header" onclick="toggleSection('${sectionId}')">
+            <td><span class="toggle-icon">${icon}</span>${sectionName}</td>`;
+        processedData.forEach(() => html += '<td></td>');
+        html += '</tr>';
+        
+        metrics.forEach(m => {
+            const classes = [];
+            if (isCollapsed) classes.push('row-hidden');
+            if (m.indent === 1) classes.push('indent-1');
+            if (m.bold) classes.push('metric-bold');
+            
+            html += `<tr class="${classes.join(' ')}"><td>${m.label}</td>`;
+            processedData.forEach(row => {
+                const val = row[m.key];
+                const cellClass = getHolderCellClass(val, m.format);
+                html += `<td class="${cellClass}">${formatHolderVal(val, m.format)}</td>`;
+            });
+            html += '</tr>';
+        });
+    });
+
+    html += '</tbody></table>';
+    
+    // 添加两个图表容器（12张表模式下默认不需要图表）
+    if (options.charts !== false) {
+        html += `
+            <div class="holders-charts-container">
+                <div class="holders-chart">
+                    <div class="chart-title">变化率分析</div>
+                    <canvas id="holdersChart1"></canvas>
+                </div>
+                <div class="holders-chart">
+                    <div class="chart-title">股东人数与户均持股</div>
+                    <canvas id="holdersChart2"></canvas>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+    
+    // 绘制图表
+    if (options.charts !== false) {
+        setTimeout(() => {
+            renderHoldersChart1(processedData);
+            renderHoldersChart2(processedData);
+        }, 100);
+    }
+}
+
+// TOP 10 Shareholders 渲染函数
+function renderTop10Shareholders(containerOverride) {
+    const container = containerOverride || document.getElementById('table-box');
+    
+    if (!top10DataLoaded || !top10ShareholdersData.length) {
+        container.innerHTML = '<div class="loading">TOP 10 股东数据加载中或无数据...</div>';
+        return;
+    }
+    
+    // 获取所有唯一的报告期并按日期排序（最新在左边）
+    const reportDatesSet = new Set(top10ShareholdersData.map(d => d.report_date));
+    const reportDates = Array.from(reportDatesSet).sort((a, b) => b.localeCompare(a));
+    
+    // 获取最新一期的数据
+    const latestDate = reportDates[0];
+    const latestData = top10ShareholdersData.filter(d => d.report_date === latestDate);
+    
+    // 获取所有唯一的股东名称
+    const shareholdersSet = new Set(top10ShareholdersData.map(d => d.shareholder_name));
+    const allShareholders = Array.from(shareholdersSet);
+    
+    // 按最新一期的名次（rank）排序，名次小的排在前面
+    // 如果最新一期没有数据，则用持股比例作为备选
+    const latestRankMap = new Map();
+    const latestHoldingMap = new Map();
+    latestData.forEach(d => {
+        latestRankMap.set(d.shareholder_name, d.rank || 999);
+        latestHoldingMap.set(d.shareholder_name, d.holding_ratio || 0);
+    });
+    
+    allShareholders.sort((a, b) => {
+        const rankA = latestRankMap.get(a);
+        const rankB = latestRankMap.get(b);
+        
+        // 如果两者都有有效的名次（在最新一期中出现），按名次升序排序
+        if (rankA !== undefined && rankA < 999 && rankB !== undefined && rankB < 999) {
+            return rankA - rankB;
+        }
+        // 有名次的排在前面
+        if (rankA !== undefined && rankA < 999) return -1;
+        if (rankB !== undefined && rankB < 999) return 1;
+        
+        // 都没有名次时，按持股比例降序排序
+        const ratioA = latestHoldingMap.get(a) || 0;
+        const ratioB = latestHoldingMap.get(b) || 0;
+        return ratioB - ratioA;
+    });
+    
+    // 构建数据矩阵：股东 x 报告期
+    const dataMatrix = new Map();
+    top10ShareholdersData.forEach(d => {
+        const key = `${d.shareholder_name}_${d.report_date}`;
+        dataMatrix.set(key, {
+            holding_ratio: d.holding_ratio,
+            shares_held: d.shares_held,
+            rank: d.rank,
+            change_amount: d.change_amount
+        });
+    });
+    
+    // 格式化报告期显示
+    const formatReportDate = (dateStr) => {
+        if (!dateStr) return '';
+        // 格式: 20160331 -> 2016Q1
+        const year = dateStr.substring(0, 4);
+        const month = dateStr.substring(4, 6);
+        const quarterMap = { '03': 'Q1', '06': 'Q2', '09': 'Q3', '12': 'Q4' };
+        const quarter = quarterMap[month] || month;
+        return `${year}${quarter}`;
+    };
+    
+    // 格式化持股比例
+    const formatRatio = (val) => {
+        if (val === null || val === undefined || isNaN(val)) return '-';
+        return Number(val).toFixed(2) + '%';
+    };
+    
+    // 格式化持股数量
+    const formatShares = (val) => {
+        if (val === null || val === undefined || isNaN(val)) return '-';
+        const num = Number(val);
+        if (num >= 1e8) return (num / 1e8).toFixed(2) + '亿';
+        if (num >= 1e4) return (num / 1e4).toFixed(2) + '万';
+        return num.toLocaleString();
+    };
+    
+    // 获取单元格背景色（持股比例越高颜色越深，字体始终深色）
+    const getCellStyle = (ratio, isLatest) => {
+        if (ratio === null || ratio === undefined || isNaN(ratio)) return 'color: #333;';
+        const r = Number(ratio);
+        if (r >= 20) return 'background-color: #1565c0; color: #000; font-weight: 600;';
+        if (r >= 10) return 'background-color: #42a5f5; color: #000; font-weight: 600;';
+        if (r >= 5) return 'background-color: #90caf9; color: #333;';
+        if (r >= 2) return 'background-color: #bbdefb; color: #333;';
+        if (r > 0) return 'background-color: #e3f2fd; color: #333;';
+        return 'color: #333;';
+    };
+    
+    let html = `
+        <style>
+            .top10-table { font-size: 11px; color: #333; }
+            .top10-table th { 
+                background: var(--header-bg); 
+                position: sticky; 
+                top: 0; 
+                z-index: 10;
+                white-space: nowrap;
+                padding: 8px 6px;
+                color: #333;
+                font-weight: 600;
+            }
+            .top10-table td { 
+                padding: 6px 8px; 
+                text-align: center;
+                white-space: nowrap;
+                color: #333;
+            }
+            .top10-table td:first-child { 
+                text-align: left; 
+                position: sticky; 
+                left: 0; 
+                background: white; 
+                z-index: 5;
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-weight: 500;
+                color: #222;
+            }
+            .top10-table tr:hover td { background-color: #f5f5f5 !important; }
+            .top10-table tr:hover td:first-child { background-color: #f5f5f5 !important; }
+            .shareholder-rank { 
+                display: inline-block; 
+                width: 18px; 
+                height: 18px; 
+                line-height: 18px; 
+                text-align: center; 
+                border-radius: 50%; 
+                font-size: 10px; 
+                margin-right: 4px;
+                font-weight: bold;
+            }
+            .rank-1 { background: #ffd700; color: #333; }
+            .rank-2 { background: #c0c0c0; color: #333; }
+            .rank-3 { background: #cd7f32; color: #333; }
+            .rank-other { background: #e0e0e0; color: #333; }
+            .change-new { color: #c62828; font-weight: bold; }
+            .change-up { color: #2e7d32; font-weight: bold; }
+            .change-down { color: #c62828; font-weight: bold; }
+            .latest-column { background-color: #fff3e0 !important; }
+            .ratio-text { color: #333; font-weight: 500; }
+        </style>
+        <table class="top10-table"><thead><tr>
+            <th style="min-width: 180px;">股东名称</th>`;
+    
+    // 表头：报告期
+    reportDates.forEach((date, idx) => {
+        const isLatest = idx === 0;
+        html += `<th class="${isLatest ? 'latest-column' : ''}">${formatReportDate(date)}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    
+    // 表体：每个股东一行
+    allShareholders.forEach(shareholder => {
+        html += `<tr><td title="${shareholder}">${shareholder}</td>`;
+        
+        reportDates.forEach((date, idx) => {
+            const isLatest = idx === 0;
+            const key = `${shareholder}_${date}`;
+            const cellData = dataMatrix.get(key);
+            
+            if (cellData) {
+                const style = getCellStyle(cellData.holding_ratio, isLatest);
+                const rankClass = cellData.rank === 1 ? 'rank-1' : 
+                                  cellData.rank === 2 ? 'rank-2' : 
+                                  cellData.rank === 3 ? 'rank-3' : 'rank-other';
+                
+                // 判断变化类型
+                let changeIndicator = '';
+                if (cellData.change_amount) {
+                    const changeStr = String(cellData.change_amount);
+                    if (changeStr === '新进' || changeStr.includes('新进')) {
+                        changeIndicator = '<span class="change-new">新</span>';
+                    } else if (changeStr.startsWith('-') || changeStr.includes('减')) {
+                        changeIndicator = '<span class="change-down">↓</span>';
+                    } else if (changeStr !== '不变' && changeStr !== '0' && !changeStr.startsWith('0')) {
+                        changeIndicator = '<span class="change-up">↑</span>';
+                    }
+                }
+                
+                const title = `${shareholder}\n持股: ${formatShares(cellData.shares_held)}\n比例: ${formatRatio(cellData.holding_ratio)}\n名次: ${cellData.rank}\n变动: ${cellData.change_amount || '-'}`;
+                
+                html += `<td class="${isLatest ? 'latest-column' : ''}" style="${style}" title="${title}">
+                    <span class="shareholder-rank ${rankClass}">${cellData.rank}</span>
+                    <span class="ratio-text">${formatRatio(cellData.holding_ratio)}</span>
+                    ${changeIndicator}
+                </td>`;
+            } else {
+                html += `<td class="${isLatest ? 'latest-column' : ''}">-</td>`;
+            }
+        });
+        
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table>';
+    
+    // 添加图例说明
+    html += `
+        <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 11px;">
+            <strong>图例说明：</strong>
+            <span style="margin-left: 15px;"><span class="shareholder-rank rank-1">1</span> 第1大股东</span>
+            <span style="margin-left: 10px;"><span class="shareholder-rank rank-2">2</span> 第2大股东</span>
+            <span style="margin-left: 10px;"><span class="shareholder-rank rank-3">3</span> 第3大股东</span>
+            <span style="margin-left: 15px; color: #e53935; font-weight: bold;">新</span> 新进
+            <span style="margin-left: 10px; color: #43a047;">↑</span> 增持
+            <span style="margin-left: 10px; color: #e53935;">↓</span> 减持
+            <span style="margin-left: 15px;">背景颜色深浅表示持股比例高低</span>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function escapeHtml(input) {
+    return String(input ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatNewsDateTime(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return String(dateStr);
+    try {
+        return d.toLocaleString('zh-CN', { hour12: false });
+    } catch (e) {
+        return d.toISOString().replace('T', ' ').slice(0, 19);
+    }
+}
+
+// News 渲染函数
+function renderNews(containerOverride) {
+    const container = containerOverride || document.getElementById('table-box');
+
+    if (!newsDataLoaded) {
+        container.innerHTML = '<div class="loading">News 数据加载中...</div>';
+        return;
+    }
+
+    if (!newsData || !newsData.length) {
+        container.innerHTML = '<div class="loading">无相关新闻记录</div>';
+        return;
+    }
+
+    const rows = [...newsData].sort((a, b) => String(b.published_at || '').localeCompare(String(a.published_at || '')));
+
+    let html = `
+        <style>
+            .news-table { table-layout: fixed; }
+            .news-table th, .news-table td { text-align: left; }
+            .news-table th { text-transform: none; letter-spacing: 0; }
+            .news-table th:first-child { min-width: 160px; }
+            .news-table td:first-child { min-width: 160px; }
+            .news-title { font-weight: 700; color: var(--text-color); }
+            .news-source { color: var(--text-muted); white-space: nowrap; }
+            .news-content { color: var(--text-color); white-space: pre-wrap; line-height: 1.4; }
+            .news-link { color: var(--accent-color); text-decoration: none; }
+            .news-link:hover { text-decoration: underline; }
+            .news-grade { font-variant-numeric: tabular-nums; font-weight: 700; }
+            .news-grade.pos { color: var(--positive); }
+            .news-grade.neg { color: var(--negative); }
+            .news-grade.neu { color: var(--text-muted); }
+            .news-mktchg { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text-muted); }
+        </style>
+        <table class="news-table">
+            <colgroup>
+              <col style="width: 170px;" />
+              <col style="width: 140px;" />
+              <col style="width: 70px;" />
+              <col style="width: 150px;" />
+              <col style="width: 280px;" />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>来源</th>
+                <th>Grade</th>
+                <th>1个月相对强度</th>
+                <th>标题</th>
+                <th>内容</th>
+              </tr>
+            </thead>
+            <tbody>
+    `;
+
+    rows.forEach(r => {
+        const dt = formatNewsDateTime(r.published_at);
+        const source = escapeHtml(r.source || '-');
+        const gradeVal = (r.grade === null || r.grade === undefined || r.grade === '') ? null : Number(r.grade);
+        const gradeText = (gradeVal === null || isNaN(gradeVal)) ? 'n/a' : String(gradeVal);
+        const gradeClass = (gradeVal === null || isNaN(gradeVal)) ? 'neu' : (gradeVal > 0 ? 'pos' : (gradeVal < 0 ? 'neg' : 'neu'));
+
+        // 计算相对强度：Stock 1M Change - Index 1M Change
+        let relativeStrength = 'n/a';
+        let stockChange = (r.mkt_cap_change_1_month === null || r.mkt_cap_change_1_month === undefined || r.mkt_cap_change_1_month === '' || r.mkt_cap_change_1_month === 'n/a') ? null : Number(r.mkt_cap_change_1_month);
+
+        if (stockChange !== null && r.published_at) {
+            const pubDate = new Date(r.published_at);
+            const oneMonthLater = new Date(pubDate);
+            oneMonthLater.setMonth(pubDate.getMonth() + 1);
+            
+            // 格式化日期字符串 yyyy-mm-dd 用于比较
+            const formatDate = (d) => d.toISOString().split('T')[0];
+            const pubDateStr = formatDate(pubDate);
+            const laterDateStr = formatDate(oneMonthLater);
+
+            if (marketIndexData && marketIndexData.length) {
+                // 查找发布日的指数 (最近一个交易日 <= pubDate)
+                let startIndex = -1;
+                for (let i = marketIndexData.length - 1; i >= 0; i--) {
+                    if (marketIndexData[i].date <= pubDateStr) {
+                        startIndex = i;
+                        break;
+                    }
+                }
+
+                // 查找一个月后的指数 (最近一个交易日 <= oneMonthLater)
+                // 且该交易日必须 > pubDate
+                let endIndex = -1;
+                for (let i = marketIndexData.length - 1; i >= 0; i--) {
+                    if (marketIndexData[i].date <= laterDateStr) {
+                         if (marketIndexData[i].date > pubDateStr) {
+                            endIndex = i;
+                        }
+                        break;
+                    }
+                }
+                
+                // 检查是否满一个月：endIndex 对应日期的实际时间跨度
+                if (startIndex !== -1 && endIndex !== -1) {
+                    const startVal = marketIndexData[startIndex].close;
+                    const endVal = marketIndexData[endIndex].close;
+                    const endDate = new Date(marketIndexData[endIndex].date);
+                    
+                    // 简单检查：如果找到的 endDate 离 1个月后 的目标日期相差太大（比如超过7天），说明数据缺失或者还没到时间
+                    // 或者更直接：如果 endDate < laterDateStr (且差距很大)，说明还没到那个日期
+                    // 这里我们假设 marketIndexData 是完整的历史数据。如果 endIndex 的日期比 laterDateStr 早很多（例如早了10天以上），可能意味着还没到那个时间（未发生）。
+                    // 但考虑到休市，放宽一点。
+                    
+                    const dayDiff = (oneMonthLater - endDate) / (1000 * 60 * 60 * 24);
+                    
+                    if (dayDiff < 10) { // 允许10天误差（长假）
+                        const indexChange = ((endVal - startVal) / startVal) * 100;
+                        const rs = stockChange - indexChange;
+                        relativeStrength = rs.toFixed(1) + '%';
+                         if (rs > 0) relativeStrength = `<span style="color:var(--positive)">+${relativeStrength}</span>`;
+                         else if (rs < 0) relativeStrength = `<span style="color:var(--negative)">${relativeStrength}</span>`;
+                    }
+                }
+            }
+        }
+        
+        const mktChg = relativeStrength; 
+        const title = escapeHtml(r.news_title || '-');
+        const contentRaw = escapeHtml(r.news_content || '-').replace(/\r?\n/g, '<br>');
+        const url = r.news_url ? String(r.news_url) : '';
+        const titleHtml = url
+            ? `<a class="news-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
+            : `<span class="news-title">${title}</span>`;
+
+        html += `
+          <tr>
+            <td>${escapeHtml(dt)}</td>
+            <td class="news-source">${source}</td>
+            <td class="news-grade ${gradeClass}">${escapeHtml(gradeText)}</td>
+            <td class="news-mktchg">${mktChg}</td>
+            <td class="news-title">${titleHtml}</td>
+            <td class="news-content">${contentRaw}</td>
+          </tr>
+        `;
+    });
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// FT-like chart theme helpers (keep charts visually consistent)
+let __ftChartThemeCache = null;
+function getFtChartTheme() {
+    if (__ftChartThemeCache) return __ftChartThemeCache;
+    const styles = getComputedStyle(document.documentElement);
+    const v = (name, fallback) => (styles.getPropertyValue(name).trim() || fallback);
+    __ftChartThemeCache = {
+        bg: v('--ft-bg', '#FFF1E5'),
+        bgMuted: v('--ft-bg-muted', '#F7E7D8'),
+        text: v('--ft-text', '#111111'),
+        muted: v('--ft-text-muted', '#6B6B6B'),
+        line: v('--ft-line', '#E6D6C7'),
+        lineStrong: v('--ft-line-strong', '#111111'),
+        accent: v('--ft-accent', '#B22222'),
+        blue: v('--ft-accent-2', '#0F5E9C'),
+        // FT-like chart palette (restrained)
+        seriesDark: '#1F4E79',
+        seriesMid: '#1C87B9',
+        seriesLight: '#9ED2E5',
+        seriesTeal: '#1B6F6A',
+        font: '12px system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif',
+        fontSmall: '11px system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif',
+        fontTiny: '10px system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif',
+    };
+    return __ftChartThemeCache;
+}
+
+// 图表1: 柱状图（总户数减少率、总市值增加率、户均持股金额增长率）+ 折线图（总市值）
+function renderHoldersChart1(data) {
+    const canvas = document.getElementById('holdersChart1');
+    if (!canvas) return;
+    
+    const theme = getFtChartTheme();
+    const ctx = canvas.getContext('2d');
+    const width = canvas.parentElement.clientWidth - 40;
+    const height = 280;
+    canvas.width = width;
+    canvas.height = height;
+    
+    // 反转数据（按日期升序）
+    const chartData = [...data].reverse();
+    
+    const padding = { top: 50, right: 80, bottom: 70, left: 60 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, width, height);
+    
+    // 获取数据范围
+    const holderChangePcts = chartData.map(d => d.holder_count_change_pct).filter(v => v !== null);
+    const mktCapChangePcts = chartData.map(d => d.market_cap_change_pct).filter(v => v !== null);
+    const avgChangePcts = chartData.map(d => d.avg_shares_change_pct).filter(v => v !== null);
+    const mktCaps = chartData.map(d => d.Market_Cap_Billion).filter(v => v !== null && v > 0);
+    
+    const allPcts = [...holderChangePcts, ...mktCapChangePcts, ...avgChangePcts];
+    if (!allPcts.length) return;
+    
+    const minPct = Math.min(...allPcts, 0);
+    const maxPct = Math.max(...allPcts, 0);
+    const pctRange = Math.max(Math.abs(minPct), Math.abs(maxPct)) * 1.2;
+    const maxMktCap = mktCaps.length ? Math.max(...mktCaps) * 1.1 : 500;
+    const minMktCap = mktCaps.length ? Math.min(...mktCaps) * 0.9 : 0;
+    
+    const barGroupWidth = chartWidth / chartData.length;
+    const barWidth = barGroupWidth * 0.2;
+    const barGap = barGroupWidth * 0.05;
+    
+    // 绘制网格线
+    ctx.strokeStyle = theme.line;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = padding.top + (chartHeight / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+    }
+    
+    // 绘制零线
+    const zeroY = padding.top + chartHeight / 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.moveTo(padding.left, zeroY);
+    ctx.lineTo(width - padding.right, zeroY);
+    ctx.stroke();
+    
+    // 柱状图颜色
+    const colors = {
+        holderChange: theme.seriesDark,  // 深蓝
+        mktCapChange: theme.seriesLight, // 浅蓝
+        avgChange: theme.seriesMid,      // 中蓝
+        mktCapLine: theme.seriesTeal     // 青绿
+    };
+    
+    // 绘制柱状图
+    chartData.forEach((d, i) => {
+        const groupX = padding.left + i * barGroupWidth;
+        
+        // 总户数减少率（蓝色）
+        const holderPct = d.holder_count_change_pct || 0;
+        const holderBarHeight = (Math.abs(holderPct) / pctRange) * (chartHeight / 2);
+        ctx.fillStyle = colors.holderChange;
+        if (holderPct >= 0) {
+            ctx.fillRect(groupX + barGap, zeroY - holderBarHeight, barWidth, holderBarHeight);
+        } else {
+            ctx.fillRect(groupX + barGap, zeroY, barWidth, holderBarHeight);
+        }
+        
+        // 总市值增加率（灰色）
+        const mktCapPct = d.market_cap_change_pct || 0;
+        const mktCapBarHeight = (Math.abs(mktCapPct) / pctRange) * (chartHeight / 2);
+        ctx.fillStyle = colors.mktCapChange;
+        if (mktCapPct >= 0) {
+            ctx.fillRect(groupX + barGap + barWidth + 2, zeroY - mktCapBarHeight, barWidth, mktCapBarHeight);
+        } else {
+            ctx.fillRect(groupX + barGap + barWidth + 2, zeroY, barWidth, mktCapBarHeight);
+        }
+        
+        // 户均持股金额增长率（黄色）
+        const avgPct = d.avg_shares_change_pct || 0;
+        const avgBarHeight = (Math.abs(avgPct) / pctRange) * (chartHeight / 2);
+        ctx.fillStyle = colors.avgChange;
+        if (avgPct >= 0) {
+            ctx.fillRect(groupX + barGap + (barWidth + 2) * 2, zeroY - avgBarHeight, barWidth, avgBarHeight);
+        } else {
+            ctx.fillRect(groupX + barGap + (barWidth + 2) * 2, zeroY, barWidth, avgBarHeight);
+        }
+    });
+    
+    // 绘制折线（总市值）
+    // 先填充面积（FT 常见：线+淡填充）
+    const linePoints = [];
+    chartData.forEach((d, i) => {
+        if (d.Market_Cap_Billion === null) return;
+        const x = padding.left + i * barGroupWidth + barGroupWidth / 2;
+        const y = padding.top + chartHeight - ((d.Market_Cap_Billion - minMktCap) / (maxMktCap - minMktCap)) * chartHeight;
+        linePoints.push({ x, y });
+    });
+    if (linePoints.length) {
+        ctx.beginPath();
+        ctx.moveTo(linePoints[0].x, padding.top + chartHeight);
+        linePoints.forEach(p => ctx.lineTo(p.x, p.y));
+        ctx.lineTo(linePoints[linePoints.length - 1].x, padding.top + chartHeight);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(27,111,106,0.12)';
+        ctx.fill();
+    }
+
+    ctx.strokeStyle = colors.mktCapLine;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let started = false;
+    chartData.forEach((d, i) => {
+        if (d.Market_Cap_Billion === null) return;
+        const x = padding.left + i * barGroupWidth + barGroupWidth / 2;
+        const y = padding.top + chartHeight - ((d.Market_Cap_Billion - minMktCap) / (maxMktCap - minMktCap)) * chartHeight;
+        if (!started) {
+            ctx.moveTo(x, y);
+            started = true;
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    
+    // 绘制图例
+    const legendY = 15;
+    const legendItems = [
+        { color: colors.holderChange, label: '总户数减少率' },
+        { color: colors.mktCapChange, label: '总市值增加率' },
+        { color: colors.avgChange, label: '户均持股金额增长率' },
+        { color: colors.mktCapLine, label: '总市值(亿元)', isLine: true }
+    ];
+    
+    ctx.font = theme.fontSmall;
+    let legendX = padding.left;
+    legendItems.forEach(item => {
+        if (item.isLine) {
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(legendX, legendY + 5);
+            ctx.lineTo(legendX + 20, legendY + 5);
+            ctx.stroke();
+        } else {
+            ctx.fillStyle = item.color;
+            ctx.fillRect(legendX, legendY, 12, 10);
+        }
+        ctx.fillStyle = theme.muted;
+        ctx.fillText(item.label, legendX + 25, legendY + 9);
+        legendX += ctx.measureText(item.label).width + 50;
+    });
+    
+    // 绘制X轴标签
+    ctx.fillStyle = theme.muted;
+    ctx.font = theme.fontTiny;
+    chartData.forEach((d, i) => {
+        if (i % 4 === 0) {
+            const x = padding.left + i * barGroupWidth + barGroupWidth / 2;
+            const date = new Date(d.report_date);
+            const label = `${date.getFullYear()}/${date.getMonth() + 1}/1`;
+            ctx.save();
+            ctx.translate(x, height - padding.bottom + 15);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillText(label, 0, 0);
+            ctx.restore();
+        }
+    });
+    
+    // 绘制左Y轴标签（百分比）
+    ctx.fillStyle = theme.muted;
+    ctx.font = theme.fontTiny;
+    ctx.textAlign = 'right';
+    for (let i = -2; i <= 2; i++) {
+        const pctVal = Math.round(pctRange * i / 2);
+        const y = zeroY - (i / 2) * (chartHeight / 2);
+        ctx.fillText(`${pctVal}%`, padding.left - 5, y + 3);
+    }
+    ctx.textAlign = 'left';
+}
+
+// 图表2: 折线图（股东总户数、户均持股金额）
+function renderHoldersChart2(data) {
+    const canvas = document.getElementById('holdersChart2');
+    if (!canvas) return;
+    
+    const theme = getFtChartTheme();
+    const ctx = canvas.getContext('2d');
+    const width = canvas.parentElement.clientWidth - 40;
+    const height = 280;
+    canvas.width = width;
+    canvas.height = height;
+    
+    // 反转数据（按日期升序）
+    const chartData = [...data].reverse();
+    
+    const padding = { top: 50, right: 80, bottom: 70, left: 70 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = theme.bg;
+    ctx.fillRect(0, 0, width, height);
+    
+    // 获取数据范围
+    const holderCounts = chartData.map(d => d.holder_count).filter(v => v > 0);
+    const avgAmounts = chartData.map(d => d.avg_shares_per_holder).filter(v => v !== null && v > 0);
+    
+    if (!holderCounts.length) return;
+    
+    const maxHolder = Math.max(...holderCounts) * 1.1;
+    const minHolder = Math.min(...holderCounts) * 0.9;
+    const maxAvg = avgAmounts.length ? Math.max(...avgAmounts) * 1.1 : 100;
+    const minAvg = avgAmounts.length ? Math.min(...avgAmounts) * 0.9 : 0;
+    
+    // 绘制网格线
+    ctx.strokeStyle = theme.line;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (chartHeight / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+    }
+    
+    const barGroupWidth = chartWidth / chartData.length;
+    
+    // 绘制折线1（股东总户数 - 蓝色）
+    ctx.strokeStyle = theme.seriesDark;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let started1 = false;
+    chartData.forEach((d, i) => {
+        if (!d.holder_count) return;
+        const x = padding.left + i * barGroupWidth + barGroupWidth / 2;
+        const y = padding.top + chartHeight - ((d.holder_count - minHolder) / (maxHolder - minHolder)) * chartHeight;
+        if (!started1) {
+            ctx.moveTo(x, y);
+            started1 = true;
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    
+    // 绘制折线2（户均持股金额 - 绿色）
+    // 采用与图表1一致的青绿
+    ctx.strokeStyle = theme.seriesTeal;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let started2 = false;
+    chartData.forEach((d, i) => {
+        if (d.avg_shares_per_holder === null) return;
+        const x = padding.left + i * barGroupWidth + barGroupWidth / 2;
+        const y = padding.top + chartHeight - ((d.avg_shares_per_holder - minAvg) / (maxAvg - minAvg)) * chartHeight;
+        if (!started2) {
+            ctx.moveTo(x, y);
+            started2 = true;
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    ctx.stroke();
+    
+    // 绘制图例
+    const legendY = 15;
+    ctx.font = theme.fontSmall;
+    
+    // 股东总户数
+    ctx.strokeStyle = theme.seriesDark;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, legendY + 5);
+    ctx.lineTo(padding.left + 25, legendY + 5);
+    ctx.stroke();
+    ctx.fillStyle = theme.muted;
+    ctx.fillText('股东总户数', padding.left + 30, legendY + 9);
+    
+    // 户均持股金额
+    ctx.strokeStyle = theme.seriesTeal;
+    ctx.beginPath();
+    ctx.moveTo(padding.left + 130, legendY + 5);
+    ctx.lineTo(padding.left + 155, legendY + 5);
+    ctx.stroke();
+    ctx.fillStyle = theme.muted;
+    ctx.fillText('户均持股金额(万元)', padding.left + 160, legendY + 9);
+    
+    // 绘制X轴标签
+    ctx.fillStyle = theme.muted;
+    ctx.font = theme.fontTiny;
+    chartData.forEach((d, i) => {
+        if (i % 4 === 0) {
+            const x = padding.left + i * barGroupWidth + barGroupWidth / 2;
+            const date = new Date(d.report_date);
+            const label = `${date.getFullYear()}/${date.getMonth() + 1}/1`;
+            ctx.save();
+            ctx.translate(x, height - padding.bottom + 15);
+            ctx.rotate(-Math.PI / 4);
+            ctx.fillText(label, 0, 0);
+            ctx.restore();
+        }
+    });
+    
+    // 绘制左Y轴标签（股东人数）
+    ctx.fillStyle = theme.muted;
+    ctx.font = theme.fontTiny;
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 5; i++) {
+        const val = minHolder + (maxHolder - minHolder) * (5 - i) / 5;
+        const y = padding.top + (chartHeight / 5) * i;
+        ctx.fillText(Math.round(val).toLocaleString(), padding.left - 5, y + 3);
+    }
+    
+    // 绘制右Y轴标签（户均持股金额）
+    ctx.fillStyle = theme.muted;
+    ctx.textAlign = 'left';
+    for (let i = 0; i <= 5; i++) {
+        const val = minAvg + (maxAvg - minAvg) * (5 - i) / 5;
+        const y = padding.top + (chartHeight / 5) * i;
+        ctx.fillText(val.toFixed(1), width - padding.right + 5, y + 3);
+    }
+    ctx.textAlign = 'left';
+}
+
+// Initialize on page load
+window.onload = function() {
+    console.log("Page loaded, initializing...");
+    try {
+        initTabs();
+        loadData();
+    } catch (err) {
+        console.error("Initialization error:", err);
+        document.getElementById('table-box').innerHTML = `<div class="loading" style="color:red;">Initialization error: ${err.message}</div>`;
+    }
+};
+</script>
+
+</body>
+</html>
