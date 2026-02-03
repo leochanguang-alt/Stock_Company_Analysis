@@ -20,6 +20,9 @@ original_data_csv/
 .vscode/
 .idea/
 
+# Vercel
+.vercel/
+
 # OS
 .DS_Store
 Thumbs.db

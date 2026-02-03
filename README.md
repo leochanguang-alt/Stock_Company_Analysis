@@ -79,6 +79,31 @@ python scripts/upload_stock_data.py --symbol=002508
 - 并行上传：4个表同时上传，速度提升 1.7x
 - 总体性能：从 ~260s 优化到 ~84s
 
-## License
+## 自动化同步页面 (BSA)
+
+本项目提供了在 `bsa.buiservice.com` 运行的自动化同步页面，架构如下：
+
+- **前端**: 部署在 Vercel (`public/stock-search.html`)
+- **后端**: 部署在 Modal.com (Python 运行环境)
+
+### 后端部署 (Modal.com)
+
+1. 安装 Modal CLI: `pip install modal`
+2. 登录: `modal token new`
+3. 配置 Secrets (在 Modal 控制台或 CLI):
+   ```bash
+   modal secret create supabase-secrets \
+     SUPABASE_URL=你的URL \
+     SUPABASE_SERVICE_ROLE_KEY=你的KEY
+   ```
+4. 部署: `modal deploy modal_app/app.py`
+5. **记下生成的 Web Endpoint URL**。
+
+### 前端部署 (Vercel)
+
+1. 在 Vercel 项目中配置 `SUPABASE_URL` 和 `SUPABASE_ANON_KEY`。
+2. 在 `public/stock-search.html` 中更新 `MODAL_ENDPOINT` 为上一步得到的 URL。
+
+## 数据表说明
 
 MIT
