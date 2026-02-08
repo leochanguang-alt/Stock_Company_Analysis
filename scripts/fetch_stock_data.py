@@ -327,7 +327,7 @@ def main():
             t0 = time.time()
             df = fetch_balance_sheet(symbol, market)
             path = os.path.join("outputs", f"{symbol}_balance_sheet_10y.csv")
-            save_financial_csv(df, path)
+            save_financial_csv(df, path, years)
             print(f"  [✓] 资产负债表 ({time.time()-t0:.1f}s)", flush=True)
             return ("balance", df, path)
         except Exception as e:
@@ -339,7 +339,7 @@ def main():
             t0 = time.time()
             df = fetch_income_statement(symbol, market)
             path = os.path.join("outputs", f"{symbol}_income_statement_10y.csv")
-            save_financial_csv(df, path)
+            save_financial_csv(df, path, years)
             print(f"  [✓] 利润表 ({time.time()-t0:.1f}s)", flush=True)
             return ("income", df, path)
         except Exception as e:
@@ -351,7 +351,7 @@ def main():
             t0 = time.time()
             df = fetch_cash_flow(symbol, market)
             path = os.path.join("outputs", f"{symbol}_cash_flow_10y.csv")
-            save_financial_csv(df, path)
+            save_financial_csv(df, path, years)
             print(f"  [✓] 现金流量表 ({time.time()-t0:.1f}s)", flush=True)
             return ("cash_flow", df, path)
         except Exception as e:

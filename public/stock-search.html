@@ -3,223 +3,1970 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票数据同步工具 - BSA</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>A股公司分析</title>
     <style>
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+            min-height: 100vh;
         }
-        .spinning {
-            animation: spin 1s linear infinite;
+
+        :root{
+            --bg: #f5f7fb;
+            --surface: #ffffff;
+            --border: #e5e7eb;
+            --muted: #6b7280;
+            --text: #1f2937;
+            --accent: #2563eb;
+            --accent-2: #2d5016;
         }
-        .step-item { transition: all 0.3s ease; }
-        .step-item.active { background-color: #f0f9ff; border-left: 4px solid #3b82f6; }
-        .step-item.done { color: #059669; }
-        .step-item.error { color: #dc2626; }
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar{
+            width: 320px;
+            background: #0b1220;
+            color: #e5e7eb;
+            display:flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 14px;
+        }
+        .brand{
+            display:flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 12px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .brand .title{
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .brand .sub{
+            font-size: 12px;
+            color: rgba(229,231,235,0.75);
+            margin-top: 2px;
+        }
+
+        .nav{
+            display:flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .nav-item{
+            padding: 10px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            color: #e5e7eb;
+            font-size: 14px;
+            user-select: none;
+        }
+        .nav-item.active{
+            border-color: rgba(37,99,235,0.55);
+            background: rgba(37,99,235,0.18);
+        }
+
+        .sidebar-card{
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.04);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .sidebar-card h3{
+            margin: 0 0 10px;
+            font-size: 13px;
+            color: rgba(229,231,235,0.9);
+            letter-spacing: 0.2px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            font-size: 14px;
+            background: rgba(255,255,255,0.06);
+            color: #e5e7eb;
+            outline: none;
+        }
+        input[type="text"]::placeholder{
+            color: rgba(229,231,235,0.55);
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,0.14);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 280px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+        }
+        .autocomplete-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover, .autocomplete-item.active {
+            background: rgba(37,99,235,0.16);
+        }
+        .autocomplete-item .code {
+            font-weight: 600;
+            color: #93c5fd;
+            font-size: 14px;
+        }
+        .autocomplete-item .name {
+            color: rgba(229,231,235,0.9);
+            font-size: 13px;
+            flex: 1;
+            margin-left: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .autocomplete-item .exchange {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.08);
+            color: rgba(229,231,235,0.75);
+        }
+        .autocomplete-item .exchange.cn { background: rgba(34,197,94,0.18); color: #86efac; }
+        .autocomplete-item .exchange.hk { background: rgba(245,158,11,0.18); color: #fcd34d; }
+        .autocomplete-item .exchange.us { background: rgba(59,130,246,0.18); color: #93c5fd; }
+
+        button {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 10px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            margin-bottom: 10px;
+            background: rgba(255,255,255,0.06);
+            color: rgba(229,231,235,0.85);
+        }
+        .status.success { background: rgba(34,197,94,0.14); color: #86efac; }
+        .status.error { background: rgba(239,68,68,0.14); color: #fca5a5; }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 16px;
+            font-size: 12px;
+            color: rgba(229,231,235,0.86);
+        }
+        .hidden { display: none; }
+
+        .small-muted{
+            font-size: 12px;
+            color: rgba(229,231,235,0.65);
+            line-height: 1.35;
+        }
+
+        /* Main */
+        .main{
+            flex: 1;
+            padding: 18px 18px;
+        }
+        .main-header{
+            display:flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+        .main-title{
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            width: 100%;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+        }
+        .main-title h1{
+            margin: 0;
+            font-size: 18px;
+        }
+        .main-title .subline{
+            margin-top: 6px;
+            color: var(--muted);
+            font-size: 12px;
+            display:flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .view-switch{
+            margin-top: 10px;
+            display:flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .view-btn{
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: #ffffff;
+            color: #0f172a;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .view-btn.active{
+            border-color: rgba(37,99,235,0.35);
+            background: rgba(37,99,235,0.10);
+            color: #1d4ed8;
+        }
+        .view-btn:disabled{
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .summary-cards{
+            display:grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .summary-card{
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: #fbfdff;
+        }
+        .summary-card .k{ font-size: 12px; color: var(--muted); }
+        .summary-card .v{ margin-top: 6px; font-size: 14px; font-weight: 700; color: var(--text); }
+        .summary-card .s{ margin-top: 2px; font-size: 11px; color: var(--muted); }
+
+        /* Tabs + table styling (borrowed from koyfin style, simplified) */
+        .tabs-container{
+            display:flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 8px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+        }
+        .tabs-container::-webkit-scrollbar { height: 6px; }
+        .tabs-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .tab{
+            flex: 0 0 auto;
+            padding: 9px 12px;
+            border-radius: 999px;
+            cursor:pointer;
+            font-size: 13px;
+            color: #475569;
+            border: 1px solid transparent;
+            user-select:none;
+            white-space: nowrap;
+        }
+        .tab:hover{ background: #f1f5f9; }
+        .tab.active{
+            background: rgba(37,99,235,0.10);
+            color: #1d4ed8;
+            border-color: rgba(37,99,235,0.25);
+            font-weight: 700;
+        }
+
+        .table-container{
+            margin-top: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+        }
+        .table-wrapper{
+            overflow: auto;
+            max-height: calc(100vh - 210px);
+        }
+        table{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        thead th{
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: right;
+            font-weight: 700;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+        thead th:first-child{
+            text-align:left;
+            min-width: 220px;
+        }
+        tbody td{
+            border-bottom: 1px solid #f1f5f9;
+            padding: 9px 12px;
+            text-align: right;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+        tbody td:first-child{
+            text-align:left;
+            color:#0f172a;
+            font-weight: 600;
+        }
+        tr.section-header td{
+            background: #f1f5f9;
+            color:#0f172a;
+            font-weight: 800;
+            cursor:pointer;
+        }
+        tr.section-header td:first-child{
+            font-weight: 800;
+        }
+        .indent-1{ padding-left: 14px !important; font-weight: 500 !important; color:#334155 !important;}
+        .indent-2{ padding-left: 26px !important; font-weight: 500 !important; color:#475569 !important;}
+        .val-muted{ color:#64748b; }
+        .val-positive{ color:#166534; font-weight: 700; }
+        .val-negative{ color:#b91c1c; font-weight: 700; }
+
+        .loading{
+            padding: 18px 16px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        /* Shareholders extra */
+        .shareholders-grid{
+            display:grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 12px;
+            padding: 12px;
+        }
+        .panel{
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow:hidden;
+            background: #fff;
+        }
+        .panel .panel-title{
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 800;
+            color:#0f172a;
+        }
+        .panel .panel-body{
+            padding: 10px 12px;
+        }
+        .chart{
+            width: 100%;
+            height: 260px;
+            background: #ffffff;
+        }
+        .top10-table{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .top10-table th, .top10-table td{
+            border-bottom: 1px solid #f1f5f9;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .top10-table th{ background:#f8fafc; font-weight:800; }
+        .badge{
+            display:inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: rgba(37,99,235,0.10);
+            color:#1d4ed8;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        @media (max-width: 980px){
+            .sidebar{ width: 300px; }
+            .summary-cards{ grid-template-columns: 1fr; }
+            .shareholders-grid{ grid-template-columns: 1fr; }
+        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex flex-col items-center py-12 px-4">
-    <div class="max-w-2xl w-full bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-        <!-- Header -->
-        <div class="bg-gray-800 px-8 py-6 text-white">
-            <h1 class="text-2xl font-bold flex items-center">
-                <i class="fas fa-database mr-3 text-blue-400"></i>
-                股票数据同步工具
-            </h1>
-            <p class="text-gray-400 mt-1">从 AKShare 同步 A 股历史数据到 Supabase</p>
-        </div>
-
-        <!-- Content -->
-        <div class="p-8">
-            <!-- Search Box -->
-            <div class="flex gap-3 mb-8">
-                <div class="relative flex-1">
-                    <input type="text" id="symbolInput" maxlength="6" 
-                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-lg"
-                        placeholder="请输入6位股票代码 (如 600031)">
-                </div>
-                <button id="syncBtn" onclick="handleSubmit()"
-                    class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-md flex items-center">
-                    <span>确定</span>
-                </button>
-            </div>
-
-            <!-- Company Info (Hidden initially) -->
-            <div id="companyCard" class="hidden mb-8 p-4 bg-blue-50 rounded-lg border border-blue-100 flex items-center">
-                <div class="bg-blue-600 p-3 rounded-full mr-4">
-                    <i class="fas fa-building text-white"></i>
-                </div>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="brand">
                 <div>
-                    <h3 id="companyName" class="font-bold text-lg text-blue-900">--</h3>
-                    <p id="companyMarket" class="text-blue-700 text-sm">市场: --</p>
+                    <div class="title">Stock Company Analysis</div>
+                    <div class="sub">A股公司分析 · 仅用 6 张表计算</div>
+                </div>
+                <div class="badge">BSA</div>
+            </div>
+
+            <div class="nav">
+                <div class="nav-item active" id="nav-ashare">A股公司分析</div>
+            </div>
+
+            <div class="sidebar-card">
+                <h3>搜索 / 下载</h3>
+                <div class="form-row">
+                    <div class="input-wrapper">
+                        <input type="text" id="symbolInput" placeholder="输入股票代码或名称搜索" autocomplete="off" />
+                        <div id="autocompleteDropdown" class="autocomplete-dropdown" style="display:none;"></div>
+                    </div>
+                    <button id="submitBtn">下载并刷新</button>
+                </div>
+                <div class="options-row small-muted" style="margin: 0 0 10px; display:flex; align-items:center; gap: 10px;">
+                    <label style="display:flex; align-items:center; gap: 8px; cursor:pointer;">
+                        <input type="checkbox" id="skipHolderCount" checked />
+                        快速模式（跳过股东集中度）
+                    </label>
+                    <button id="viewBtn" style="background:#334155;">仅查看分析</button>
+                </div>
+
+                <div id="status" class="status">等待输入股票代码。</div>
+
+                <div id="result" class="hidden">
+                    <div class="result-grid">
+                        <div>公司名称：</div><div id="resultCompany">-</div>
+                        <div>市场：</div><div id="resultExchange">-</div>
+                        <div>资产负债表：</div><div id="countBalance">0</div>
+                        <div>利润表：</div><div id="countIncome">0</div>
+                        <div>现金流量表：</div><div id="countCash">0</div>
+                        <div>市值：</div><div id="countMktCap">0</div>
+                        <div>前十大股东：</div><div id="countTop10">0</div>
+                        <div>股东集中度：</div><div id="countHolder">0</div>
+                    </div>
+                    <div class="small-muted" style="margin-top:10px;">
+                        提示：点击“仅查看分析”会直接从 Supabase 读取 6 张表数据渲染 10 个标签页，不会写入任何数据。
+                    </div>
                 </div>
             </div>
 
-            <!-- Steps Progress -->
-            <div id="stepsContainer" class="hidden space-y-2 border-t border-gray-100 pt-6">
-                <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">同步进度</h4>
-                
-                <div id="step-1" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text">1. 验证股票代码</div>
+            <div class="sidebar-card">
+                <h3>说明</h3>
+                <div class="small-muted">
+                    - 指标计算仅使用：`cn_balance_sheet_1y / cn_cash_flow_10y / cn_income_statement_10y / cn_mkt_cap_10y / cn_top10_shareholder_10y / cn_holder_court_concentration_10y`。<br/>
+                    - 本页面不会读取 `company_financials_long`、`stock_valuation_history`、`cn_company_news` 等其他表。<br/>
+                    - 若某公司缺少数据，相关单元格显示 `-`。
                 </div>
-                <div id="step-2" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text" data-default="2. 下载资产负债表">2. 下载资产负债表</div>
-                </div>
-                <div id="step-3" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text" data-default="3. 下载利润表">3. 下载利润表</div>
-                </div>
-                <div id="step-4" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text" data-default="4. 下载现金流量表">4. 下载现金流量表</div>
-                </div>
-                <div id="step-5" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text" data-default="5. 下载市值历史">5. 下载市值历史</div>
-                </div>
-                <div id="step-6" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text" data-default="6. 下载前十大股东">6. 下载前十大股东</div>
-                </div>
-                <div id="step-7" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text" data-default="7. 下载股东集中度">7. 下载股东集中度</div>
-                </div>
-                <div id="step-8" class="step-item p-3 rounded-md flex items-center">
-                    <div class="icon w-8 flex justify-center mr-3"><i class="far fa-circle text-gray-300"></i></div>
-                    <div class="text">8. 上传数据到数据库</div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="main-header">
+                <div class="main-title">
+                    <h1 id="mainCompanyTitle">A股公司分析</h1>
+                    <div class="subline">
+                        <span id="mainSymbol">symbol: -</span>
+                        <span id="mainDate">latest: -</span>
+                        <span id="mainHint">请在左侧搜索并加载。</span>
+                    </div>
+                    <div class="view-switch">
+                        <button class="view-btn" id="btnViewLTM">Last 12 Months (TTM)</button>
+                        <button class="view-btn active" id="btnViewAnnual">Annual (Y)</button>
+                    </div>
+                    <div class="summary-cards">
+                        <div class="summary-card">
+                            <div class="k">Market Cap</div>
+                            <div class="v" id="sumMktCap">-</div>
+                            <div class="s" id="sumMktCapDate">-</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="k">Enterprise Value (估算)</div>
+                            <div class="v" id="sumEV">-</div>
+                            <div class="s">EV ≈ 市值 + 有息负债 - 现金</div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="k">P/E (估算)</div>
+                            <div class="v" id="sumPE">-</div>
+                            <div class="s">P/E ≈ 市值 / 归母净利润</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Final Status Message -->
-            <div id="statusMsg" class="mt-6 text-center text-sm font-medium"></div>
-        </div>
+            <div class="tabs-container" id="analysisTabs"></div>
+            <div class="table-container">
+                <div class="table-wrapper" id="analysisBox">
+                    <div class="loading">请选择或输入股票代码，然后点击“仅查看分析”或“下载并刷新”。</div>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script>
-        // Replace this with your actual Modal endpoint URL after deployment
-        const MODAL_ENDPOINT = 'https://your-username--stock-data-fetcher-fetch-stock-data.modal.run';
+        const MODAL_ENDPOINT = 'https://leochanguang-alt--stock-data-fetcher-fastapi-app.modal.run/fetch-stock-data';
+        const btn = document.getElementById('submitBtn');
+        const viewBtn = document.getElementById('viewBtn');
+        const btnViewLTM = document.getElementById('btnViewLTM');
+        const btnViewAnnual = document.getElementById('btnViewAnnual');
+        const statusEl = document.getElementById('status');
+        const resultEl = document.getElementById('result');
+        const symbolInput = document.getElementById('symbolInput');
+        const dropdown = document.getElementById('autocompleteDropdown');
 
-        function resetSteps() {
-            document.getElementById('stepsContainer').classList.remove('hidden');
-            document.getElementById('companyCard').classList.add('hidden');
-            document.getElementById('statusMsg').textContent = '';
-            for (let i = 1; i <= 8; i++) {
-                const el = document.getElementById(`step-${i}`);
-                el.className = 'step-item p-3 rounded-md flex items-center';
-                el.querySelector('.icon').innerHTML = '<i class="far fa-circle text-gray-300"></i>';
-                const textEl = el.querySelector('.text');
-                if (textEl.dataset.default) textEl.textContent = textEl.dataset.default;
+        let searchTimeout = null;
+        let selectedIndex = -1;
+        let searchResults = [];
+        let selectedSymbol = '';
+
+        // Analysis UI state
+        const analysisTabsEl = document.getElementById('analysisTabs');
+        const analysisBoxEl = document.getElementById('analysisBox');
+        let currentAnalysisTab = 'Highlights';
+        let currentSymbol = '';
+        let analysisData = null;
+        let currentView = 'annual'; // 'annual' | 'ltm'
+
+        function setStatus(message, type) {
+            statusEl.textContent = message;
+            statusEl.className = 'status' + (type ? ` ${type}` : '');
+        }
+
+        function resetResult() {
+            resultEl.classList.add('hidden');
+            document.getElementById('resultCompany').textContent = '-';
+            document.getElementById('resultExchange').textContent = '-';
+            document.getElementById('countBalance').textContent = '0';
+            document.getElementById('countIncome').textContent = '0';
+            document.getElementById('countCash').textContent = '0';
+            document.getElementById('countMktCap').textContent = '0';
+            document.getElementById('countTop10').textContent = '0';
+            document.getElementById('countHolder').textContent = '0';
+        }
+
+        function renderResult(data) {
+            resultEl.classList.remove('hidden');
+            document.getElementById('resultCompany').textContent = data.company || '-';
+            document.getElementById('resultExchange').textContent = data.exchange || '-';
+            const counts = data.counts || {};
+            document.getElementById('countBalance').textContent = counts.balance_sheet ?? 0;
+            document.getElementById('countIncome').textContent = counts.income_statement ?? 0;
+            document.getElementById('countCash').textContent = counts.cash_flow ?? 0;
+            document.getElementById('countMktCap').textContent = counts.mkt_cap ?? 0;
+            document.getElementById('countTop10').textContent = counts.top10_shareholders ?? 0;
+            document.getElementById('countHolder').textContent = counts.holder_count_concentration ?? 0;
+        }
+
+        // ========= Analysis (only 6 tables) =========
+        // 这几个标签页（Income/Balance/Cash/Holders/Top10）项目名/分组/顺序对齐 koyfin_dashboard_002508.html
+        const TAB_ORDER = [
+            { key: 'Highlights', label: 'Highlights' },
+            { key: 'IncomeStatement', label: 'Income Statement' },
+            { key: 'BalanceSheet', label: 'Balance Sheet' },
+            { key: 'CashFlow', label: 'Cash Flow' },
+            { key: 'Multiples', label: 'Multiples' },
+            { key: 'EnterpriseValue', label: 'Enterprise Value' },
+            { key: 'Profitability', label: 'Profitability' },
+            { key: 'ROIC', label: 'ROIC' },
+            { key: 'Solvency', label: 'Solvency' },
+            { key: 'Holders', label: 'Holders' },
+            { key: 'Top10Shareholders', label: 'TOP 10 Shareholder' },
+        ];
+
+        function toNum(v) {
+            if (v === null || v === undefined) return null;
+            if (typeof v === 'string' && v.trim() === '') return null;
+            const n = Number(v);
+            return Number.isFinite(n) ? n : null;
+        }
+        function safeDiv(a, b) {
+            const na = toNum(a), nb = toNum(b);
+            if (na === null || nb === null || nb === 0) return null;
+            return na / nb;
+        }
+        // 重要：cn_* 财报表内的金额字段按“亿元”存储（不是元）
+        // 本页三表（BS/IS/CF）与股东相关按旧页要求统一显示为 Mn（百万）：Mn = 亿元 * 100
+        function fmtMn(vYi, digits = 1) {
+            const n = toNum(vYi);
+            if (n === null) return '-';
+            const m = n * 100;
+            const s = m.toFixed(digits);
+            const neg = s.startsWith('-');
+            const sAbs = neg ? s.slice(1) : s;
+            const [intP, decP] = sAbs.split('.');
+            const intFmt = Number(intP).toLocaleString('en-US');
+            return (neg ? '-' : '') + (decP ? `${intFmt}.${decP}` : intFmt) + 'M';
+        }
+        function fmtRatioX(v, digits = 1) {
+            const n = toNum(v);
+            if (n === null) return '-';
+            return n.toFixed(digits) + 'x';
+        }
+        function fmtYiYuan(v) {
+            const n = toNum(v);
+            if (n === null) return '-';
+            return n.toFixed(2) + ' 亿元';
+        }
+        function fmtPct(v, digits = 1) {
+            const n = toNum(v);
+            if (n === null) return '-';
+            return (n * 100).toFixed(digits) + '%';
+        }
+        function fmtPctFrom100(v, digits = 1) {
+            // 部分字段（如 change）已经是百分比（%），这里按原值展示
+            const n = toNum(v);
+            if (n === null) return '-';
+            return n.toFixed(digits) + '%';
+        }
+        function fmtNum(v, digits = 2) {
+            const n = toNum(v);
+            if (n === null) return '-';
+            return n.toFixed(digits);
+        }
+        function fmtInt(v) {
+            const n = toNum(v);
+            if (n === null) return '-';
+            return Math.round(n).toLocaleString('zh-CN');
+        }
+
+        function getTopDates(rows, limit = 6) {
+            const dates = (rows || []).map(r => r.report_date).filter(Boolean);
+            const uniq = [];
+            for (const d of dates) {
+                if (!uniq.includes(d)) uniq.push(d);
+                if (uniq.length >= limit) break;
+            }
+            return uniq;
+        }
+        function yearFromISO(d) { return String(d || '').slice(0, 4); }
+        function quarterFromISO(d) {
+            const md = String(d || '').slice(5, 10);
+            if (md === '03-31') return 1;
+            if (md === '06-30') return 2;
+            if (md === '09-30') return 3;
+            if (md === '12-31') return 4;
+            return null;
+        }
+        function colLabelForView(dateStr) {
+            if (currentView === 'annual') return `CY ${yearFromISO(dateStr)}`;
+            const q = quarterFromISO(dateStr);
+            return q ? `${q}Q CY${yearFromISO(dateStr)}` : String(dateStr);
+        }
+        function buildColumns(dates) {
+            return (dates || []).map(d => ({ key: d, label: colLabelForView(d) }));
+        }
+        function indexByDate(rows) {
+            const map = new Map();
+            for (const r of rows || []) {
+                if (r?.report_date) map.set(r.report_date, r);
+            }
+            return map;
+        }
+
+        function renderTabs() {
+            analysisTabsEl.innerHTML = '';
+            TAB_ORDER.forEach(t => {
+                const el = document.createElement('div');
+                el.className = 'tab' + (t.key === currentAnalysisTab ? ' active' : '');
+                el.innerText = t.label;
+                el.onclick = () => {
+                    currentAnalysisTab = t.key;
+                    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+                    el.classList.add('active');
+                    renderAnalysis();
+                };
+                analysisTabsEl.appendChild(el);
+            });
+        }
+
+        function sectionRow(sectionId, title, isCollapsed) {
+            const icon = isCollapsed ? '▶' : '▼';
+            return `<tr class="section-header" data-section="${sectionId}" data-title="${title}" data-collapsed="${isCollapsed ? '1' : '0'}">
+                <td>${icon} ${title}</td>
+                <td class="val-muted" colspan="99">点击展开/收起</td>
+            </tr>`;
+        }
+
+        function renderMetricsTable({ columns, sections }) {
+            let html = '<table><thead><tr><th></th>';
+            columns.forEach(c => {
+                const label = (c && typeof c === 'object') ? (c.label ?? c.key) : c;
+                html += `<th>${label}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            for (const sec of sections) {
+                const secId = `sec_${sec.title}`.replace(/\s/g, '_');
+                const collapsed = sec.collapsed === true;
+                html += sectionRow(secId, sec.title, collapsed);
+                sec.metrics.forEach(m => {
+                    const classes = [];
+                    if (m.indent === 1) classes.push('indent-1');
+                    if (m.indent === 2) classes.push('indent-2');
+                    html += `<tr data-parent="${secId}" style="${collapsed ? 'display:none;' : ''}">
+                        <td class="${classes.join(' ')}">${m.label}</td>`;
+                    columns.forEach(col => {
+                        const d = (col && typeof col === 'object') ? col.key : col;
+                        const val = m.get(d);
+                        let cell = '-';
+                        let cellClass = '';
+                        if (val === null || val === undefined) {
+                            cell = '-';
+                            cellClass = 'val-muted';
+                        } else if (m.format === 'mn') {
+                            cell = fmtMn(val, m.digits ?? 1);
+                        } else if (m.format === 'yi_yuan') {
+                            cell = fmtYiYuan(val);
+                        } else if (m.format === 'pct') {
+                            cell = fmtPct(val, m.digits ?? 1);
+                            if (toNum(val) !== null) cellClass = toNum(val) >= 0 ? 'val-positive' : 'val-negative';
+                        } else if (m.format === 'pct_from_100') {
+                            cell = fmtPctFrom100(val, m.digits ?? 1);
+                            if (toNum(val) !== null) cellClass = toNum(val) >= 0 ? 'val-positive' : 'val-negative';
+                        } else if (m.format === 'int') {
+                            cell = fmtInt(val);
+                        } else if (m.format === 'ratio') {
+                            cell = fmtRatioX(val, m.digits ?? 1);
+                        } else if (m.format === 'num') {
+                            cell = fmtNum(val, m.digits ?? 2);
+                        } else {
+                            cell = String(val);
+                        }
+                        html += `<td class="${cellClass}">${cell}</td>`;
+                    });
+                    html += '</tr>';
+                });
+            }
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function attachSectionToggles() {
+            analysisBoxEl.querySelectorAll('tr.section-header').forEach(tr => {
+                tr.addEventListener('click', () => {
+                    const id = tr.dataset.section;
+                    const isCollapsed = tr.dataset.collapsed === '1';
+                    const nextCollapsed = !isCollapsed;
+                    tr.dataset.collapsed = nextCollapsed ? '1' : '0';
+
+                    const title = tr.dataset.title || '';
+                    const icon = nextCollapsed ? '▶' : '▼';
+                    const firstTd = tr.querySelector('td');
+                    if (firstTd) firstTd.textContent = `${icon} ${title}`;
+
+                    analysisBoxEl.querySelectorAll(`tr[data-parent="${id}"]`).forEach(r => {
+                        r.style.display = nextCollapsed ? 'none' : '';
+                    });
+                });
+            });
+        }
+
+        function pickViewRows(data) {
+            const views = data?.views || {};
+            const quarterly = views?.quarterly || {};
+            const annual = views?.annual || {};
+            const ltm = views?.ltm || {};
+
+            const bsRows = currentView === 'annual'
+                ? (annual.balance_sheet || [])
+                : (ltm.balance_sheet || quarterly.balance_sheet || data?.cn_balance_sheet_1y || []);
+
+            const incRows = currentView === 'annual'
+                ? (annual.income_statement || [])
+                : (ltm.income_statement_ttm || []);
+
+            const cfRows = currentView === 'annual'
+                ? (annual.cash_flow || [])
+                : (ltm.cash_flow_ttm || []);
+
+            // 市值：用于展示/图表时仍用日频全量；Annual(Y) 视图再做压缩展示
+            const mktDaily = (ltm.mkt_cap || quarterly.mkt_cap || data?.cn_mkt_cap_10y || []);
+            const mktAnnual = (annual.mkt_cap || []);
+
+            return { quarterly, annual, ltm, bsRows, incRows, cfRows, mktDaily, mktAnnual };
+        }
+
+        // ====== Statement tab configs (copied from koyfin_dashboard_002508.html) ======
+        const statementTabConfigs = {
+            IncomeStatement: {
+                'Revenues': [
+                    { key: 'Revenue', label: 'Total Revenues', bold: true },
+                    { key: 'Operate_Income', label: 'Revenues', indent: 1 },
+                    { key: 'Other_Business_Revenue', label: 'Other Revenues', indent: 1 },
+                    { key: 'Main_Revenue', label: 'Revenues', indent: 1 },
+                    { key: 'Other_Revenue', label: 'Other Revenues', indent: 1 },
+                    { key: 'Total_Revenue_Gross', label: 'Total Revenues, Gross', indent: 1 },
+                    { key: 'Rev_YoY', label: 'YoY Growth %', format: 'pct' }
+                ],
+                'Gross Profit': [
+                    { key: 'Total_Operating_Cost', label: 'Cost Of Revenues', indent: 1 },
+                    { key: 'COGS', label: 'Cost Of Revenues', indent: 1 },
+                    { key: 'Gross_Profit', label: 'Gross Profit (Loss)', bold: true },
+                    { key: 'Gross_Profit_YoY', label: 'YoY Growth %', format: 'pct' }
+                ],
+                'Operating Income & Expenses': [
+                    { key: 'SGA_Exp', label: 'Selling General & Admin Expenses' },
+                    { key: 'Selling_Exp', label: 'Selling and Marketing Expenses', indent: 1 },
+                    { key: 'Admin_Exp', label: 'General and Administrative Expenses', indent: 1 },
+                    { key: 'RD_Exp', label: 'R&D Expenses' },
+                    { key: 'DA', label: 'Depreciation & Amortization' },
+                    { key: 'Other_Operating_Exp', label: 'Other Operating Expenses' },
+                    { key: 'Operating_Income', label: 'Operating Income', bold: true }
+                ],
+                'Net Interest Expense': [
+                    { key: 'Net_Interest_Exp', label: 'Net Interest Expenses', bold: true },
+                    { key: 'Interest_Exp', label: 'Interest Expense', indent: 1 },
+                    { key: 'Interest_Inc', label: 'Interest Income', indent: 1 },
+                    { key: 'Investment_Income', label: 'Investment Income', indent: 1 },
+                    { key: 'Interest_And_Investment_Income', label: 'Interest And Investment Income', indent: 1 }
+                ],
+                'Earnings Before Taxes (EBT)': [
+                    { key: 'Equity_Method_Income', label: 'Income (Loss) On Equity Affiliates' },
+                    { key: 'Non_Operating_Net', label: 'Other Non Operating Income (Expenses)' },
+                    { key: 'Non_Operating_Income', label: 'Non Operating Income', indent: 1 },
+                    { key: 'Non_Operating_Exp', label: 'Non Operating Expenses', indent: 1 },
+                    { key: 'EBT_Excl_Unusual', label: 'EBT, Excl. Unusual Items' },
+                    { key: 'Total_Impairment', label: 'Impairment Charges' },
+                    { key: 'Asset_Impairment', label: 'Asset Impairment Charges', indent: 1 },
+                    { key: 'Credit_Impairment', label: 'Credit Impairment Charges', indent: 1 },
+                    { key: 'Gain_On_Asset_Sale', label: 'Gain (Loss) On Sale Of Assets' },
+                    { key: 'Asset_Disposal_Gain', label: 'Asset Disposal Gain', indent: 1 },
+                    { key: 'Other_Unusual_Items', label: 'Other Unusual Items, Total' },
+                    { key: 'Other_Income', label: 'Other Income', indent: 1 },
+                    { key: 'FV_Change_Income', label: 'Fair Value Change Income', indent: 1 },
+                    { key: 'Pretax_Income', label: 'EBT, Incl. Unusual Items', bold: true }
+                ],
+                'Earnings from Operations | Net Income': [
+                    { key: 'Income_Tax_Exp', label: 'Income Tax Expense', indent: 1 },
+                    { key: 'Earnings_Continuing', label: 'Earnings From Continuing Operations' },
+                    { key: 'Minority_Interest_Income', label: 'Minority Interest', indent: 1 },
+                    { key: 'Net_Income_Parent', label: 'Net Income to Parent', indent: 1 },
+                    { key: 'Net_Income', label: 'Net Income', bold: true },
+                    { key: 'Net_Income_Common', label: 'Net Income to Common Incl Extra Items' }
+                ],
+                'Supplemental Items': [
+                    { key: 'EBITDA', label: 'EBITDA', bold: true },
+                    { key: 'EBIT', label: 'EBIT' },
+                    { key: 'EPS', label: 'Basic EPS', format: 'num' },
+                    { key: 'Diluted_EPS', label: 'Diluted EPS', format: 'num' }
+                ]
+            },
+            BalanceSheet: {
+                'Assets': [
+                    { key: 'Total_Cash', label: 'Total Cash And Short Term Investments', bold: true },
+                    { key: 'Cash_Equivalents', label: 'Cash And Equivalents', indent: 1 },
+                    { key: 'Short_Term_Investments', label: 'Short Term Investments', indent: 1 },
+                    { key: 'Total_Receivables', label: 'Total Receivables', bold: true },
+                    { key: 'Accounts_Receivable', label: 'Accounts Receivable', indent: 1 },
+                    { key: 'Notes_Receivable', label: 'Notes Receivable', indent: 1 },
+                    { key: 'Other_Receivables_Final', label: 'Other Receivables', indent: 1 },
+                    { key: 'Inventory', label: 'Inventory' },
+                    { key: 'Prepaid_Expenses', label: 'Prepaid Expenses' },
+                    { key: 'Contract_Assets', label: 'Contract Assets', indent: 1 },
+                    { key: 'Other_Current_Assets', label: 'Other Current Assets' },
+                    { key: 'Total_Current_Assets', label: 'Total Current Assets', bold: true },
+                    { key: 'Total_PPE_Koyfin', label: 'Net Property Plant And Equipment', bold: true },
+                    { key: 'Gross_PPE', label: 'Gross Property Plant And Equipment', indent: 1 },
+                    { key: 'Accumulated_Depreciation', label: 'Accumulated Depreciation', indent: 1 },
+                    { key: 'LT_Equity_Investment', label: 'Long-term Investments' },
+                    { key: 'Goodwill', label: 'Goodwill' },
+                    { key: 'Intangible_Assets', label: 'Other Intangibles' },
+                    { key: 'Deferred_Tax_Asset', label: 'Deferred Tax Assets Long-Term' },
+                    { key: 'LT_Prepaid_Expenses', label: 'Deferred Charges Long-Term' },
+                    { key: 'Other_NonCurrent_Assets', label: 'Other Long-Term Assets' },
+                    { key: 'Total_NonCurrent_Assets', label: 'Total Non Current Assets', bold: true },
+                    { key: 'Total_Assets', label: 'Total Assets', bold: true }
+                ],
+                'Liabilities': [
+                    { key: 'Accounts_Payable', label: 'Accounts Payable' },
+                    { key: 'Notes_Payable', label: 'Notes Payable', indent: 1 },
+                    { key: 'Employee_Benefits_Payable', label: 'Accrued Expenses' },
+                    { key: 'Other_Payables', label: 'Other Payables', indent: 1 },
+                    { key: 'Short_Term_Debt', label: 'Short-Term Debt', indent: 1 },
+                    { key: 'Current_Portion_LT_Debt', label: 'Current Portion of Long-Term Debt', indent: 1 },
+                    { key: 'Taxes_Payable', label: 'Current Income Taxes Payable' },
+                    { key: 'Unearned_Revenue_Total', label: 'Unearned Revenue Current, Total' },
+                    { key: 'Contract_Liabilities', label: 'Contract Liabilities', indent: 1 },
+                    { key: 'Other_Current_Liabilities', label: 'Other Current Liabilities' },
+                    { key: 'Total_Current_Liabilities', label: 'Total Current Liabilities', bold: true },
+                    { key: 'Long_Payables', label: 'Long-term Payables', indent: 1 },
+                    { key: 'Long_Term_Debt', label: 'Long-Term Debt' },
+                    { key: 'Lease_Liabilities', label: 'Long-Term Leases' },
+                    { key: 'Unearned_Revenue_NonCurrent', label: 'Unearned Revenue Non Current' },
+                    { key: 'Deferred_Tax_Liability', label: 'Deferred Tax Liability Non Current' },
+                    { key: 'Other_NonCurrent_Liabilities', label: 'Other Non Current Liabilities' },
+                    { key: 'Total_NonCurrent_Liabilities', label: 'Total Non Current Liabilities', bold: true },
+                    { key: 'Total_Liabilities', label: 'Total Liabilities', bold: true },
+                    { key: 'Common_Equity', label: 'Common Equity', bold: true },
+                    { key: 'Common_Stock', label: 'Common Stock', indent: 1 },
+                    { key: 'Additional_Paid_In_Capital', label: 'Additional Paid In Capital', indent: 1 },
+                    { key: 'Surplus_Reserve', label: 'Surplus Reserve', indent: 1 },
+                    { key: 'Retained_Earnings', label: 'Retained Earnings', indent: 1 },
+                    { key: 'Treasury_Stock', label: 'Treasury Stock', indent: 1 },
+                    { key: 'Other_Comprehensive_Income', label: 'Comprehensive Income and Other', indent: 1 },
+                    { key: 'Equity_Parent', label: 'Equity Parent', indent: 1 },
+                    { key: 'Minority_Interest', label: 'Minority Interest', indent: 1 },
+                    { key: 'Total_Equity', label: 'Total Equity', bold: true },
+                    { key: 'Total_Assets', label: 'Total Liabilities And Equity', bold: true }
+                ],
+                'Supplemental Items': [
+                    { key: 'Shares_Outstanding', label: 'Total Common Shares Outstanding', format: 'int' },
+                    { key: 'Book_Value_Per_Share', label: 'Book Value / Share', format: 'num' },
+                    { key: 'Tangible_Book_Value', label: 'Tangible Book Value' },
+                    { key: 'Tangible_BV_Per_Share', label: 'Tangible Book Value Per Share', format: 'num' },
+                    { key: 'Total_Debt', label: 'Total Debt' },
+                    { key: 'Net_Debt', label: 'Net Debt' },
+                    { key: 'LT_Equity_Investment', label: 'Equity Method Investments' }
+                ]
+            },
+            CashFlow: {
+                'Net Income': [
+                    { key: 'DA', label: 'Depreciation & Amortization, Total' },
+                    { key: 'Net_Income', label: 'Net Income', bold: true }
+                ],
+                'Cash from Operations': [
+                    { key: 'Net_Income', label: 'Net Income' },
+                    { key: 'DA', label: 'Depreciation & Amortization, Total', indent: 1 },
+                    { key: 'Change_In_AR', label: 'Change In Accounts Receivable', indent: 1 },
+                    { key: 'Change_In_Inventory', label: 'Change In Inventories', indent: 1 },
+                    { key: 'Change_In_AP', label: 'Change In Accounts Payable', indent: 1 },
+                    { key: 'Other_Operating_Activities', label: 'Other Operating Activities, Total', indent: 1 },
+                    { key: 'Cash_From_Sales', label: 'Cash From Sales', indent: 2 },
+                    { key: 'Cash_Paid_For_Goods', label: 'Cash Paid For Goods', indent: 2 },
+                    { key: 'Cash_For_Employees', label: 'Cash For Employees', indent: 2 },
+                    { key: 'Taxes_Paid', label: 'Cash Income Tax Paid (Refund)', indent: 2 },
+                    { key: 'Tax_Refunds', label: 'Tax Refunds', indent: 2 },
+                    { key: 'Other_Operating_Cash_In', label: 'Other Operating Cash In', indent: 2 },
+                    { key: 'Other_Operating_Cash_Out', label: 'Other Operating Cash Out', indent: 2 },
+                    { key: 'OCF', label: 'Cash from Operations', bold: true }
+                ],
+                'Cash from Investing': [
+                    { key: 'CapEx', label: 'Capital Expenditure' },
+                    { key: 'Proceeds_From_Asset_Sales', label: 'Sale of Property, Plant, and Equipment', indent: 1 },
+                    { key: 'Cash_Acquisitions', label: 'Cash Acquisitions', indent: 1 },
+                    { key: 'Cash_Divestitures', label: 'Divestitures', indent: 1 },
+                    { key: 'Investment_In_Securities', label: 'Investment in Mkt and Equity Securities, Total', indent: 1 },
+                    { key: 'Other_Investing_Activities', label: 'Other Investing Activities, Total', indent: 1 },
+                    { key: 'Proceeds_From_Investment_Sales', label: 'Proceeds From Investment Sales', indent: 2 },
+                    { key: 'Cash_For_Investments', label: 'Cash For Investments', indent: 2 },
+                    { key: 'Other_Investing_Cash_In', label: 'Other Investing Cash In', indent: 2 },
+                    { key: 'Other_Investing_Cash_Out', label: 'Other Investing Cash Out', indent: 2 },
+                    { key: 'Investment_Income_Received', label: 'Investment Income Received', indent: 2 },
+                    { key: 'ICF', label: 'Cash from Investing', bold: true }
+                ],
+                'Cash from Financing': [
+                    { key: 'Total_Debt_Issued', label: 'Total Debt Issued', indent: 1 },
+                    { key: 'Total_Debt_Repaid', label: 'Total Debt Repaid', indent: 1 },
+                    { key: 'Proceeds_From_Equity', label: 'Issuance of Common Stock', indent: 1 },
+                    { key: 'Treasury_Stock', label: 'Repurchase of Common Stock', indent: 1 },
+                    { key: 'Dividends_Paid', label: 'Common & Preferred Stock Dividends Paid' },
+                    { key: 'Common_Dividends_Paid', label: 'Common Dividends Paid', indent: 2 },
+                    { key: 'Other_Financing_Activities', label: 'Other Financing Activities', indent: 1 },
+                    { key: 'Loan_Proceeds', label: 'Loan Proceeds', indent: 2 },
+                    { key: 'Bond_Issuance', label: 'Bond Issuance', indent: 2 },
+                    { key: 'Debt_Repayment', label: 'Debt Repayment', indent: 2 },
+                    { key: 'Minority_Dividends_Paid', label: 'Minority Dividends Paid', indent: 2 },
+                    { key: 'Other_Financing_Cash_In', label: 'Other Financing Cash In', indent: 2 },
+                    { key: 'Other_Financing_Cash_Out', label: 'Other Financing Cash Out', indent: 2 },
+                    { key: 'CFF', label: 'Cash from Financing', bold: true }
+                ],
+                'Net Change in Cash': [
+                    { key: 'FX_Effect', label: 'Foreign Exchange Rate Adjustments', indent: 1 },
+                    { key: 'Beginning_Cash', label: 'Beginning Cash', indent: 1 },
+                    { key: 'Ending_Cash', label: 'Ending Cash', indent: 1 },
+                    { key: 'Net_Change_In_Cash', label: 'Net Change in Cash', bold: true }
+                ],
+                'Supplemental Items': [
+                    { key: 'FCF', label: 'Free Cash Flow', bold: true },
+                    { key: 'FCF_Per_Share', label: 'Free Cash Flow per Share' },
+                    { key: 'Working_Capital_Change', label: 'Change In Net Working Capital' },
+                    { key: 'Net_Debt_Issued', label: 'Net Debt Issued / Repaid' }
+                ]
+            }
+        };
+
+        function sortByDateAsc(rows, field) {
+            return [...(rows || [])].sort((a, b) => String(a?.[field] || '').localeCompare(String(b?.[field] || '')));
+        }
+
+        // Build "old-dashboard-like" derived rows from cn_* tables (still ONLY from 6 tables)
+        function buildStatementRowsForView(viewKey, data) {
+            const views = data?.views || {};
+            const bs = viewKey === 'ltm' ? (views?.ltm?.balance_sheet || []) : (views?.annual?.balance_sheet || []);
+            const inc = viewKey === 'ltm' ? (views?.ltm?.income_statement_ttm || []) : (views?.annual?.income_statement || []);
+            const cf = viewKey === 'ltm' ? (views?.ltm?.cash_flow_ttm || []) : (views?.annual?.cash_flow || []);
+
+            const dailyCaps = sortByDateAsc(views?.ltm?.mkt_cap || views?.quarterly?.mkt_cap || [], 'trade_date');
+            let capIdx = 0;
+            let lastCap = null;
+
+            const byDate = new Map();
+            const ensure = (d) => {
+                if (!d) return null;
+                if (!byDate.has(d)) byDate.set(d, { report_date: d });
+                return byDate.get(d);
+            };
+
+            // Minimal mapping from cn_* snake_case -> English keys used in old tabConfigs
+            (bs || []).forEach(r => {
+                const o = ensure(r?.report_date);
+                if (!o) return;
+                o.Cash_Equivalents = toNum(r.monetaryfunds);
+                o.Short_Term_Investments = null; // schema currently lacks explicit short-term investment fields
+                o.Contract_Assets = toNum(r.contract_asset);
+                o.Accounts_Receivable = toNum(r.accounts_rece);
+                o.Notes_Receivable = toNum(r.note_rece);
+                o.Prepaid_Expenses = toNum(r.prepayment);
+                o.Other_Receivables = toNum(r.other_rece);
+                o.Inventory = toNum(r.inventory);
+                o.Other_Current_Assets = toNum(r.other_current_asset);
+                o.Total_Current_Assets = toNum(r.total_current_assets);
+                o.Total_NonCurrent_Assets = toNum(r.total_noncurrent_assets);
+                o.Net_PPE = toNum(r.fixed_asset);
+                o.Construction_In_Progress = toNum(r.cip);
+                o.Construction_In_Progress_Total = toNum(r.cip);
+                o.Intangible_Assets = toNum(r.intangible_asset);
+                o.Goodwill = toNum(r.goodwill);
+                o.LT_Equity_Investment = toNum(r.long_equity_invest);
+                o.Deferred_Tax_Asset = toNum(r.defer_tax_asset);
+                o.LT_Prepaid_Expenses = toNum(r.long_prepaid_expense);
+                o.Other_NonCurrent_Assets = toNum(r.other_noncurrent_asset);
+                o.Total_Assets = toNum(r.total_assets);
+
+                o.Accounts_Payable = toNum(r.accounts_payable);
+                o.Notes_Payable = toNum(r.note_payable);
+                o.Employee_Benefits_Payable = toNum(r.staff_salary_payable);
+                o.Other_Payables = toNum(r.other_payable);
+                o.Short_Term_Debt = toNum(r.short_loan);
+                o.Current_Portion_LT_Debt = toNum(r.noncurrent_liab_1year);
+                o.Taxes_Payable = toNum(r.tax_payable);
+                o.Unearned_Revenue_Total = toNum(r.contract_liab);
+                o.Contract_Liabilities = toNum(r.contract_liab);
+                o.Other_Current_Liabilities = toNum(r.other_current_liab);
+                o.Total_Current_Liabilities = toNum(r.total_current_liab);
+                o.Long_Payables = toNum(r.long_payable);
+                o.Long_Term_Debt = toNum(r.long_loan);
+                o.Bonds_Payable = toNum(r.bond_payable);
+                o.Lease_Liabilities = toNum(r.lease_liab);
+                o.LT_Deferred_Revenue = toNum(r.defer_income);
+                o.Deferred_Tax_Liability = toNum(r.defer_tax_liab);
+                o.Other_NonCurrent_Liabilities = toNum(r.other_noncurrent_liab);
+                o.Total_NonCurrent_Liabilities = toNum(r.total_noncurrent_liab);
+                o.Total_Liabilities = toNum(r.total_liabilities);
+
+                o.Equity_Parent = toNum(r.total_parent_equity);
+                o.Minority_Interest = toNum(r.minority_equity);
+                o.Total_Equity = toNum(r.total_equity);
+                o.Common_Stock = toNum(r.share_capital);
+                o.Additional_Paid_In_Capital = toNum(r.capital_reserve);
+                o.Surplus_Reserve = toNum(r.surplus_reserve);
+                o.Retained_Earnings = toNum(r.unassign_rpofit);
+                o.Treasury_Stock = toNum(r.treasury_shares);
+                o.Other_Comprehensive_Income = toNum(r.other_compre_income);
+            });
+
+            (inc || []).forEach(r => {
+                const o = ensure(r?.report_date);
+                if (!o) return;
+                o.Total_Revenue_Gross = toNum(r.total_operate_income);
+                o.Total_Operating_Cost = toNum(r.total_operate_cost);
+                o.Operate_Income = toNum(r.operate_income);
+                o.Revenue = toNum(r.operate_income);
+                o.Other_Business_Revenue = toNum(r.other_business_income);
+                o.COGS = toNum(r.operate_cost);
+                o.Selling_Exp = toNum(r.sale_expense);
+                o.Admin_Exp = toNum(r.manage_expense);
+                o.RD_Exp = toNum(r.research_expense);
+                o.Fin_Exp = toNum(r.finance_expense);
+                o.Operating_Income = toNum(r.operate_profit);
+                o.Pretax_Income = toNum(r.total_profit);
+                o.Income_Tax_Exp = toNum(r.income_tax);
+                o.Net_Income = toNum(r.netprofit);
+                o.Net_Income_Parent = toNum(r.parent_netprofit);
+                o.Minority_Interest_Income = toNum(r.minority_interest);
+                o.Interest_Inc = toNum(r.interest_income);
+                o.Interest_Exp = toNum(r.interest_expense);
+                o.Investment_Income = toNum(r.invest_income);
+                o.Equity_Method_Income = toNum(r.invest_joint_income);
+                o.Non_Operating_Income = toNum(r.nonbusiness_income);
+                o.Non_Operating_Exp = toNum(r.nonbusiness_expense);
+                o.Taxes_Surcharges = toNum(r.operate_tax_add);
+                o.Asset_Impairment = toNum(r.asset_impairment_loss);
+                o.Credit_Impairment = toNum(r.credit_impairment_loss);
+                o.Asset_Disposal_Gain = toNum(r.asset_disposal_income);
+                o.NonCurrent_Asset_Disposal_Gain = toNum(r.noncurrent_disposal_income);
+                o.NonCurrent_Asset_Disposal_Loss = toNum(r.noncurrent_disposal_loss);
+                o.Other_Income = toNum(r.other_income);
+                o.FV_Change_Income = toNum(r.fairvalue_change_income);
+                o.EPS = toNum(r.basic_eps);
+                o.Diluted_EPS = toNum(r.diluted_eps);
+            });
+
+            (cf || []).forEach(r => {
+                const o = ensure(r?.report_date);
+                if (!o) return;
+                o.OCF = toNum(r.netcash_operate);
+                o.ICF = toNum(r.netcash_invest);
+                o.CFF = toNum(r.netcash_finance);
+                o.CapEx = toNum(r.construct_long_asset);
+                o.Net_Change_In_Cash = toNum(r.cce_add);
+                o.FX_Effect = toNum(r.rate_change_effect);
+                o.Dividends_Paid = toNum(r.assign_dividend_porfit);
+                o.Minority_Dividends_Paid = toNum(r.subsidiary_pay_dividend);
+                const paid = toNum(r.pay_all_tax);
+                const refund = toNum(r.receive_tax_refund);
+                o.Taxes_Paid = (paid == null && refund == null) ? null : ((refund ?? 0) - (paid ?? 0));
+                o.Tax_Refunds = refund;
+                o.Other_Operating_Cash_In = toNum(r.receive_other_operate);
+                o.Other_Operating_Cash_Out = toNum(r.pay_other_operate);
+                o.Cash_From_Sales = toNum(r.sales_services);
+                o.Cash_Paid_For_Goods = toNum(r.buy_services);
+                o.Cash_For_Employees = toNum(r.pay_staff_cash);
+                o.Cash_For_Investments = toNum(r.invest_pay_cash);
+                o.Proceeds_From_Investment_Sales = toNum(r.withdraw_invest);
+                o.Other_Investing_Cash_In = toNum(r.receive_other_invest);
+                o.Other_Investing_Cash_Out = toNum(r.pay_other_invest);
+                o.Investment_Income_Received = toNum(r.receive_invest_income);
+                o.Proceeds_From_Asset_Sales = toNum(r.disposal_long_asset);
+                o.Cash_Divestitures = toNum(r.disposal_subsidiary_other);
+                o.Cash_Acquisitions = toNum(r.buy_subsidiary_equity) ?? toNum(r.obtain_subsidiary_other);
+                o.Loan_Proceeds = toNum(r.receive_loan_cash);
+                o.Bond_Issuance = toNum(r.issue_bond);
+                o.Debt_Repayment = toNum(r.pay_debt_cash);
+                o.Proceeds_From_Equity = toNum(r.accept_invest_cash);
+                o.Other_Financing_Cash_In = toNum(r.receive_other_finance);
+                o.Other_Financing_Cash_Out = toNum(r.pay_other_finance);
+                o.Beginning_Cash = toNum(r.begin_cce);
+                o.Ending_Cash = toNum(r.end_cce);
+            });
+
+            const rowsAsc = Array.from(byDate.values()).sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)));
+
+            // attach market cap
+            rowsAsc.forEach(r => {
+                const d = r.report_date;
+                while (capIdx < dailyCaps.length && String(dailyCaps[capIdx]?.trade_date || '') <= String(d)) {
+                    lastCap = dailyCaps[capIdx];
+                    capIdx++;
+                }
+                r.Market_Cap = toNum(lastCap?.mkt_cap_billion_cny);
+            });
+
+            // derived (matches old dashboard logic; missing values treated as 0)
+            rowsAsc.forEach((r, idx) => {
+                const prev = idx > 0 ? rowsAsc[idx - 1] : null;
+                const get = (k) => (r[k] !== null && r[k] !== undefined && !isNaN(r[k])) ? Number(r[k]) : 0;
+                const getPrev = (k) => (prev && prev[k] !== null && prev[k] !== undefined && !isNaN(prev[k])) ? Number(prev[k]) : 0;
+                const marketCapVal = (r.Market_Cap !== null && r.Market_Cap !== undefined && !isNaN(r.Market_Cap) && Number(r.Market_Cap) > 0) ? Number(r.Market_Cap) : null;
+
+                r.Total_Short_Term_Borrowings = get('Short_Term_Debt') + get('Current_Portion_LT_Debt');
+                r.Total_Debt = r.Total_Short_Term_Borrowings + get('Long_Term_Debt') + get('Bonds_Payable');
+                r.Total_Cash = get('Cash_Equivalents') + get('Short_Term_Investments');
+                r.Net_Debt = r.Total_Debt - r.Total_Cash;
+                r.EV = marketCapVal !== null ? (marketCapVal + r.Total_Debt - r.Total_Cash + get('Minority_Interest')) : null;
+
+                r.Other_Revenue = get('Other_Business_Revenue');
+                r.Main_Revenue = get('Revenue') - r.Other_Revenue;
+                r.Gross_Profit = get('Revenue') - get('COGS');
+                r.SGA_Exp = get('Selling_Exp') + get('Admin_Exp');
+                r.Other_Operating_Exp = get('Taxes_Surcharges');
+                r.EBIT = r.Gross_Profit - get('Selling_Exp') - get('Admin_Exp') - get('RD_Exp');
+                r.DA = get('Revenue') * 0.015;
+                r.EBITDA = r.EBIT + r.DA;
+                r.Net_Interest_Exp = get('Fin_Exp') * -1;
+                r.Interest_And_Investment_Income = get('Interest_Inc') + get('Investment_Income');
+                r.Non_Operating_Net = get('Non_Operating_Income') - get('Non_Operating_Exp');
+                r.Gain_On_Asset_Sale = get('Asset_Disposal_Gain') + get('NonCurrent_Asset_Disposal_Gain') - get('NonCurrent_Asset_Disposal_Loss');
+                r.Total_Impairment = get('Asset_Impairment') + get('Credit_Impairment');
+                r.Other_Unusual_Items = get('Other_Income') + get('FV_Change_Income');
+                r.EBT_Excl_Unusual = r.EBIT + r.Net_Interest_Exp;
+                r.Earnings_Continuing = get('Net_Income');
+                r.Net_Income_Common = get('Net_Income_Parent') || get('Net_Income');
+
+                r.AR_Total = (get('Accounts_Receivable') || get('Notes_AR_Combined'));
+                r.AP_Total = (get('Accounts_Payable') || get('Notes_AP_Combined'));
+                r.Change_In_AR = -(r.AR_Total - (prev ? getPrev('AR_Total') : 0));
+                r.Change_In_Inventory = -(get('Inventory') - (prev ? getPrev('Inventory') : 0));
+                r.Change_In_AP = (r.AP_Total - (prev ? getPrev('AP_Total') : 0));
+                r.Other_Operating_Activities = get('Other_Operating_Cash_In') - Math.abs(get('Other_Operating_Cash_Out'));
+
+                r.Total_Receivables = (get('Accounts_Receivable') + get('Notes_Receivable') + get('Financing_Receivables')) || get('Notes_AR_Combined');
+                r.CIP = get('Construction_In_Progress_Total') || get('Construction_In_Progress');
+                r.Total_PPE_Koyfin = get('Net_PPE') + r.CIP;
+                r.Unearned_Revenue_Total = get('Unearned_Revenue') + get('Contract_Liabilities');
+                r.Unearned_Revenue_NonCurrent = get('LT_Deferred_Revenue');
+                r.Other_Receivables_Final = get('Other_Receivables_Total') || get('Other_Receivables');
+                r.Common_Equity = get('Equity_Parent') || (get('Total_Equity') - get('Minority_Interest'));
+                r.Tangible_Book_Value = get('Total_Equity') - get('Goodwill') - get('Intangible_Assets');
+                r.Shares_Outstanding = get('EPS') ? (get('Net_Income') / get('EPS')) : null;
+                r.Book_Value_Per_Share = r.Shares_Outstanding ? (get('Total_Equity') / r.Shares_Outstanding) : null;
+                r.Tangible_BV_Per_Share = r.Shares_Outstanding ? (r.Tangible_Book_Value / r.Shares_Outstanding) : null;
+
+                r.Working_Capital = get('Total_Current_Assets') - get('Total_Current_Liabilities');
+                r.Working_Capital_Change = r.Working_Capital - (prev ? (getPrev('Working_Capital') || 0) : 0);
+                r.FCF = get('OCF') - Math.abs(get('CapEx'));
+                r.FCF_Per_Share = r.Shares_Outstanding ? (r.FCF / r.Shares_Outstanding) : null;
+                r.Total_Debt_Issued = get('Loan_Proceeds') + get('Bond_Issuance');
+                r.Total_Debt_Repaid = get('Debt_Repayment');
+                r.Net_Debt_Issued = r.Total_Debt_Issued - Math.abs(r.Total_Debt_Repaid);
+                r.Common_Dividends_Paid = get('Dividends_Paid') - Math.abs(get('Minority_Dividends_Paid'));
+                r.Investment_In_Securities = get('Cash_For_Investments') - get('Proceeds_From_Investment_Sales');
+                r.Other_Investing_Activities = get('Other_Investing_Cash_In') - Math.abs(get('Other_Investing_Cash_Out'));
+                r.Other_Financing_Activities = get('Other_Financing_Cash_In') - Math.abs(get('Other_Financing_Cash_Out'));
+            });
+
+            // addYoY like old dashboard
+            const periods = viewKey === 'ltm' ? 4 : 1;
+            const pct = (curr, prevVal) => (prevVal ? (curr - prevVal) / prevVal : null);
+            rowsAsc.forEach((r, idx) => {
+                const prev = rowsAsc[idx - periods];
+                if (!prev) return;
+                r.Rev_YoY = pct(r.Revenue, prev.Revenue);
+                r.Gross_Profit_YoY = pct(r.Gross_Profit, prev.Gross_Profit);
+            });
+
+            return rowsAsc.slice().sort((a, b) => String(b.report_date).localeCompare(String(a.report_date)));
+        }
+
+        function renderStatementTab(tabKey, data) {
+            const viewKey = currentView === 'ltm' ? 'ltm' : 'annual';
+            const rowsDesc = buildStatementRowsForView(viewKey, data);
+            const cfg = statementTabConfigs[tabKey];
+            if (!cfg) return '<div class="loading">No config.</div>';
+
+            const limit = currentView === 'annual' ? 18 : 8;
+            const dates = getTopDates(rowsDesc, limit);
+            const columns = buildColumns(dates);
+            const byDate = indexByDate(rowsDesc);
+
+            const defaultFmtForKey = (k) => {
+                if (!k) return 'mn';
+                if (k === 'Shares_Outstanding') return 'int';
+                if (/Per_Share/i.test(k)) return 'num';
+                if (/BV_Per_Share/i.test(k)) return 'num';
+                return 'mn';
+            };
+
+            const sections = Object.entries(cfg).map(([title, items]) => ({
+                title,
+                collapsed: false,
+                metrics: items.map(it => ({
+                    label: it.label,
+                    indent: it.indent || 0,
+                    // 旧页三表金额单位是 M；这里支持 pct/ratio/int/num，其它按 key 默认
+                    format: it.format === 'pct'
+                        ? 'pct'
+                        : (it.format === 'ratio'
+                            ? 'ratio'
+                            : (it.format === 'int'
+                                ? 'int'
+                                : (it.format === 'num' ? 'num' : defaultFmtForKey(it.key)))),
+                    digits: it.format === 'ratio'
+                        ? 1
+                        : (it.format === 'pct'
+                            ? 1
+                            : (it.format === 'num' ? 2 : (defaultFmtForKey(it.key) === 'num' ? 2 : 1))),
+                    get: (d) => byDate.get(d)?.[it.key] ?? null,
+                }))
+            }));
+
+            return renderMetricsTable({ columns, sections });
+        }
+
+        function computeSummary(data) {
+            const { quarterly, bsRows, incRows, cfRows, mktDaily } = pickViewRows(data);
+
+            const bs = (bsRows || [])[0] || null;
+            const is0 = (incRows || [])[0] || null;
+            const cf0 = (cfRows || [])[0] || null;
+            const mc = (mktDaily || []);
+            const lastMc = mc.length ? mc[mc.length - 1] : null;
+
+            const mktCapYi = toNum(lastMc?.mkt_cap_billion_cny); // 亿元
+            const mktCap = mktCapYi;
+
+            const cash = toNum(bs?.monetaryfunds);
+            const debt = [
+                toNum(bs?.short_loan),
+                toNum(bs?.long_loan),
+                toNum(bs?.bond_payable),
+                toNum(bs?.lease_liab),
+            ].filter(v => v !== null).reduce((a, b) => a + b, 0);
+
+            const evYi = (mktCap === null) ? null : (mktCap + debt - (cash ?? 0)); // 亿元
+            const pe = safeDiv(mktCap, toNum(is0?.parent_netprofit));
+            const ocf = toNum(cf0?.netcash_operate);
+            const ocfEvPct = safeDiv(ocf, evYi);
+
+            return {
+                mktCapYi,
+                mktCapDate: lastMc?.trade_date || null,
+                evYi,
+                pe,
+                latestReportDate: bs?.report_date || is0?.report_date || null,
+                ocfEvPct,
+            };
+        }
+
+        function renderHoldersTab(data) {
+            const holders = data?.cn_holder_court_concentration_10y || [];
+            const { mktDaily } = pickViewRows(data);
+            const capsAsc = sortByDateAsc(mktDaily || [], 'trade_date');
+
+            const dates = getTopDates(holders, 12);
+            const byDate = indexByDate(holders);
+
+            // market cap at each report date (pick last trading day <= report_date)
+            const colsAsc = dates.slice().sort((a, b) => String(a).localeCompare(String(b)));
+            let capIdx = 0;
+            let lastCap = null;
+            const capByReportDate = new Map();
+            for (const d of colsAsc) {
+                while (capIdx < capsAsc.length && String(capsAsc[capIdx]?.trade_date || '') <= String(d)) {
+                    lastCap = capsAsc[capIdx];
+                    capIdx++;
+                }
+                capByReportDate.set(d, lastCap);
+            }
+
+            return `
+                <div class="panel">
+                    <div class="panel-title">Holders (from cn_holder_court_concentration_10y)</div>
+                    <div class="panel-body" style="padding:0;">
+                        ${renderMetricsTable({
+                            columns: dates,
+                            sections: [
+                                {
+                                    title: 'Shareholder Count',
+                                    collapsed: false,
+                                    metrics: [
+                                        { label: 'Total Shareholders', format: 'int', get: (d) => byDate.get(d)?.holder_count ?? null },
+                                        { label: 'Shareholder Count Change', format: 'pct_from_100', digits: 2, get: (d) => byDate.get(d)?.holder_count_change ?? null, indent: 1 },
+                                        { label: 'Market Capitalization', format: 'mn', digits: 1, get: (d) => toNum(capByReportDate.get(d)?.mkt_cap_billion_cny) },
+                                        { label: 'Avg Shares per Holder', format: 'int', get: (d) => byDate.get(d)?.avg_hold_num ?? null },
+                                        { label: 'Avg Shares Change', format: 'pct_from_100', digits: 2, get: (d) => byDate.get(d)?.avg_hold_num_change ?? null, indent: 1 },
+                                    ]
+                                }
+                            ]
+                        })}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTop10ShareholdersTab(data) {
+            const top10 = data?.cn_top10_shareholder_10y || [];
+            const latestDate = (top10?.[0]?.report_date) || null;
+            const latest = latestDate ? top10.filter(r => r.report_date === latestDate) : [];
+
+            return `
+                <div class="panel">
+                    <div class="panel-title">TOP 10 Shareholder (from cn_top10_shareholders_10y)${latestDate ? ` · Latest: ${latestDate}` : ''}</div>
+                    <div class="panel-body" style="padding:0;">
+                        ${latest.length ? `
+                        <table class="top10-table">
+                            <thead><tr>
+                                <th style="width:56px;">#</th>
+                                <th>Shareholder</th>
+                                <th style="width:120px;">Hold Ratio</th>
+                                <th style="width:160px;">Hold Num</th>
+                                <th style="width:160px;">Change Num</th>
+                            </tr></thead>
+                            <tbody>
+                                ${latest.map(r => `
+                                    <tr>
+                                        <td><span class="badge">${r.rank ?? '-'}</span></td>
+                                        <td title="${r.shareholder_name || ''}">${r.shareholder_name || '-'}</td>
+                                        <td>${r.hold_ratio == null ? '-' : (Number(r.hold_ratio).toFixed(2) + '%')}</td>
+                                        <td>${r.hold_num == null ? '-' : Math.round(Number(r.hold_num)).toLocaleString('en-US')}</td>
+                                        <td>${r.change_num == null ? '-' : Math.round(Number(r.change_num)).toLocaleString('en-US')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        ` : `<div class="loading">No TOP 10 shareholder data.</div>`}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAnalysis() {
+            if (!analysisData) {
+                analysisBoxEl.innerHTML = '<div class="loading">请先加载公司数据。</div>';
+                return;
+            }
+
+            renderTabs();
+
+            const { quarterly, annual, ltm, bsRows, incRows, cfRows, mktDaily, mktAnnual } = pickViewRows(analysisData);
+
+            const summary = computeSummary(analysisData);
+            document.getElementById('mainCompanyTitle').textContent = analysisData.security_name ? `${analysisData.security_name}` : 'A股公司分析';
+            document.getElementById('mainSymbol').textContent = `symbol: ${analysisData.symbol || '-'}`;
+            document.getElementById('mainDate').textContent = `latest: ${summary.latestReportDate || '-'}`;
+            document.getElementById('mainHint').textContent = `View: ${currentView === 'annual' ? 'Annual(Y)' : 'Last 12M (TTM)'} · 数据来源：仅 6 张表`;
+            document.getElementById('sumMktCap').textContent = summary.mktCapYi == null ? '-' : fmtYiYuan(summary.mktCapYi);
+            document.getElementById('sumMktCapDate').textContent = summary.mktCapDate ? `trade_date: ${summary.mktCapDate}` : '-';
+            document.getElementById('sumEV').textContent = summary.evYi == null ? '-' : fmtYiYuan(summary.evYi);
+            document.getElementById('sumPE').textContent = summary.pe == null ? '-' : fmtNum(summary.pe, 1);
+
+            if (currentAnalysisTab === 'Holders') {
+                analysisBoxEl.innerHTML = renderHoldersTab(analysisData);
+                attachSectionToggles();
+                return;
+            }
+            if (currentAnalysisTab === 'Top10Shareholders') {
+                analysisBoxEl.innerHTML = renderTop10ShareholdersTab(analysisData);
+                attachSectionToggles();
+                return;
+            }
+
+            if (currentAnalysisTab === 'BalanceSheet') {
+                analysisBoxEl.innerHTML = renderStatementTab('BalanceSheet', analysisData);
+                attachSectionToggles();
+                return;
+            }
+
+            if (currentAnalysisTab === 'IncomeStatement') {
+                analysisBoxEl.innerHTML = renderStatementTab('IncomeStatement', analysisData);
+                attachSectionToggles();
+                return;
+            }
+
+            if (currentAnalysisTab === 'CashFlow') {
+                analysisBoxEl.innerHTML = renderStatementTab('CashFlow', analysisData);
+                attachSectionToggles();
+                return;
+            }
+
+            if (currentAnalysisTab === 'Multiples' || currentAnalysisTab === 'EnterpriseValue' || currentAnalysisTab === 'Profitability' || currentAnalysisTab === 'ROIC' || currentAnalysisTab === 'Solvency' || currentAnalysisTab === 'Highlights') {
+                const showCols = currentView === 'annual' ? 10 : 8;
+                const columns = getTopDates(incRows, showCols);
+                const byBs = indexByDate(bsRows);
+                const byInc = indexByDate(incRows);
+                const byCf = indexByDate(cfRows);
+
+                // Market cap: pick the last trading day <= report_date
+                const capsAsc = (mktDaily || [])
+                    .filter(r => r?.trade_date && r?.mkt_cap_billion_cny != null)
+                    .slice()
+                    .sort((a, b) => String(a.trade_date).localeCompare(String(b.trade_date)));
+                const colsAsc = columns.slice().sort((a, b) => String(a).localeCompare(String(b)));
+                let capIdx = 0;
+                let lastCapRow = null;
+                const capByReportDate = new Map();
+                for (const d of colsAsc) {
+                    while (capIdx < capsAsc.length && String(capsAsc[capIdx].trade_date) <= String(d)) {
+                        lastCapRow = capsAsc[capIdx];
+                        capIdx++;
+                    }
+                    capByReportDate.set(d, lastCapRow);
+                }
+
+                const colIndex = new Map(columns.map((d, i) => [d, i]));
+                const prevDateOf = (d) => {
+                    const i = colIndex.get(d);
+                    if (i == null) return null;
+                    const step = currentView === 'annual' ? 1 : 4; // TTM 用同比（同季度）近似
+                    const j = i + step;
+                    return j < columns.length ? columns[j] : null;
+                };
+                const pctChange = (curr, prev) => {
+                    const c = toNum(curr);
+                    const p = toNum(prev);
+                    if (c === null || p === null || p === 0) return null;
+                    return (c - p) / Math.abs(p);
+                };
+
+                const cap = (d) => toNum(capByReportDate.get(d)?.mkt_cap_billion_cny);
+                const cash = (d) => toNum(byBs.get(d)?.monetaryfunds);
+                const minority = (d) => toNum(byBs.get(d)?.minority_equity);
+                const totalDebt = (d) => {
+                    const bs = byBs.get(d) || {};
+                    const parts = [
+                        toNum(bs.short_loan),
+                        toNum(bs.long_loan),
+                        toNum(bs.bond_payable),
+                        toNum(bs.lease_liab),
+                        toNum(bs.noncurrent_liab_1year),
+                    ].filter(v => v !== null);
+                    if (!parts.length) return null;
+                    return parts.reduce((a, b) => a + b, 0);
+                };
+                const ev = (d) => {
+                    const mc = cap(d);
+                    if (mc === null) return null;
+                    const debt = totalDebt(d) ?? 0;
+                    const c = cash(d) ?? 0;
+                    const mi = minority(d) ?? 0;
+                    return mc + debt - c + mi;
+                };
+                const revenue = (d) => {
+                    const inc = byInc.get(d) || {};
+                    return toNum(inc.operate_income) ?? toNum(inc.total_operate_income);
+                };
+                const parentProfit = (d) => toNum((byInc.get(d) || {}).parent_netprofit);
+                const equity = (d) => {
+                    const bs = byBs.get(d) || {};
+                    return toNum(bs.total_parent_equity) ?? toNum(bs.total_equity);
+                };
+                const assets = (d) => toNum((byBs.get(d) || {}).total_assets);
+                const opProfit = (d) => toNum((byInc.get(d) || {}).operate_profit);
+                const cogs = (d) => toNum((byInc.get(d) || {}).operate_cost);
+                const grossProfit = (d) => {
+                    const rev = revenue(d);
+                    const cost = cogs(d);
+                    if (rev === null || cost === null) return null;
+                    return rev - cost;
+                };
+                const grossMargin = (d) => safeDiv(grossProfit(d), revenue(d));
+                const opMargin = (d) => safeDiv(opProfit(d), revenue(d));
+                const netMargin = (d) => safeDiv(parentProfit(d), revenue(d));
+                const roe = (d) => safeDiv(parentProfit(d), equity(d));
+                const roa = (d) => safeDiv(parentProfit(d), assets(d));
+
+                // Old page approximates D&A as 1.5% of revenue
+                const ebitda = (d) => {
+                    const ebit = opProfit(d);
+                    const rev = revenue(d);
+                    if (ebit === null || rev === null) return null;
+                    return ebit + rev * 0.015;
+                };
+                const ebitdaMargin = (d) => safeDiv(ebitda(d), revenue(d));
+
+                const ocf = (d) => toNum((byCf.get(d) || {}).netcash_operate);
+                const capex = (d) => toNum((byCf.get(d) || {}).construct_long_asset);
+                const eps = (d) => toNum((byInc.get(d) || {}).diluted_eps ?? (byInc.get(d) || {}).basic_eps);
+
+                const pe = (d) => safeDiv(cap(d), parentProfit(d));
+                const ps = (d) => safeDiv(cap(d), revenue(d));
+                const pb = (d) => safeDiv(cap(d), equity(d));
+                const evSales = (d) => safeDiv(ev(d), revenue(d));
+                const ocfYield = (d) => safeDiv(ocf(d), ev(d));
+
+                const currentRatio = (d) => {
+                    const bs = byBs.get(d) || {};
+                    return safeDiv(toNum(bs.total_current_assets), toNum(bs.total_current_liab));
+                };
+                const leverage = (d) => safeDiv(toNum((byBs.get(d) || {}).total_liabilities), assets(d));
+                const debtToEquity = (d) => safeDiv(totalDebt(d), equity(d));
+                const cashToDebt = (d) => safeDiv(cash(d), totalDebt(d));
+
+                const sections = [];
+
+                if (currentAnalysisTab === 'Highlights') {
+                    sections.push({
+                        title: '▼ Key Financials',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Revenue', format: 'yi_yuan', get: (d) => revenue(d) },
+                            { label: 'Revenue Growth', format: 'pct', digits: 1, get: (d) => pctChange(revenue(d), revenue(prevDateOf(d))) , indent: 1 },
+                            { label: 'Gross Profit', format: 'yi_yuan', get: (d) => grossProfit(d) },
+                            { label: 'Gross Margin', format: 'pct', digits: 1, get: (d) => grossMargin(d), indent: 1 },
+                            { label: 'EBITDA (est.)', format: 'yi_yuan', get: (d) => ebitda(d) },
+                            { label: 'EBITDA Margin (est.)', format: 'pct', digits: 1, get: (d) => ebitdaMargin(d), indent: 1 },
+                            { label: 'Net Income (Parent)', format: 'yi_yuan', get: (d) => parentProfit(d) },
+                            { label: 'Net Margin (Parent)', format: 'pct', digits: 1, get: (d) => netMargin(d), indent: 1 },
+                            { label: 'Diluted EPS', format: 'num', digits: 2, get: (d) => eps(d) },
+                            { label: 'EPS Growth', format: 'pct', digits: 1, get: (d) => pctChange(eps(d), eps(prevDateOf(d))), indent: 1 },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Capital Structure',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Market Cap', format: 'yi_yuan', get: (d) => cap(d) },
+                            { label: 'Cash & Equivalents', format: 'yi_yuan', get: (d) => cash(d) },
+                            { label: 'Total Debt (est.)', format: 'yi_yuan', get: (d) => totalDebt(d) },
+                            { label: 'Minority Interest', format: 'yi_yuan', get: (d) => minority(d) },
+                            { label: 'Enterprise Value', format: 'yi_yuan', get: (d) => ev(d) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Cash Flow Analysis',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Operating Cash Flow', format: 'yi_yuan', get: (d) => ocf(d) },
+                            { label: 'OCF Growth', format: 'pct', digits: 1, get: (d) => pctChange(ocf(d), ocf(prevDateOf(d))), indent: 1 },
+                            { label: 'CapEx', format: 'yi_yuan', get: (d) => capex(d) },
+                            { label: 'CapEx Growth', format: 'pct', digits: 1, get: (d) => pctChange(capex(d), capex(prevDateOf(d))), indent: 1 },
+                        ]
+                    });
+                }
+
+                if (currentAnalysisTab === 'Multiples') {
+                    sections.push({
+                        title: '▼ Multiples',
+                        collapsed: false,
+                        metrics: [
+                            // 对齐旧页行名（LTM）
+                            { label: 'Price / Earnings (LTM)', format: 'num', digits: 1, get: (d) => pe(d) },
+                            { label: 'Price / Sales (LTM)', format: 'num', digits: 2, get: (d) => ps(d) },
+                            { label: 'Price / Book (LTM)', format: 'num', digits: 2, get: (d) => pb(d) },
+                            { label: 'EV / Sales (LTM)', format: 'num', digits: 2, get: (d) => evSales(d) },
+                            { label: 'EV / EBITDA (LTM)', format: 'num', digits: 2, get: (d) => safeDiv(ev(d), ebitda(d)) },
+                            { label: 'EV / EBIT (LTM)', format: 'num', digits: 2, get: (d) => safeDiv(ev(d), opProfit(d)) },
+                            // TBV 需要无形资产/商誉字段；暂时按缺失返回 null（后续可补齐）
+                            { label: 'Price / Tangible Book Value (LTM)', format: 'num', digits: 2, get: () => null },
+                        ]
+                    });
+                }
+
+                if (currentAnalysisTab === 'EnterpriseValue') {
+                    sections.push({
+                        title: '▼ Enterprise Value',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Market Cap', format: 'yi_yuan', get: (d) => cap(d) },
+                            { label: 'Cash & Equivalents', format: 'yi_yuan', get: (d) => cash(d) },
+                            { label: 'Total Debt (est.)', format: 'yi_yuan', get: (d) => totalDebt(d) },
+                            { label: 'Minority Interest', format: 'yi_yuan', get: (d) => minority(d) },
+                            { label: 'EV', format: 'yi_yuan', get: (d) => ev(d) },
+                            { label: 'Net Debt', format: 'yi_yuan', get: (d) => {
+                                const debt = totalDebt(d);
+                                const c = cash(d);
+                                if (debt === null || c === null) return null;
+                                return debt - c;
+                            }},
+                        ]
+                    });
+                }
+
+                if (currentAnalysisTab === 'Profitability') {
+                    sections.push({
+                        title: '▼ Profitability',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Gross Profit', format: 'yi_yuan', get: (d) => grossProfit(d) },
+                            { label: 'Gross Margin', format: 'pct', digits: 1, get: (d) => grossMargin(d), indent: 1 },
+                            { label: 'Operating Income (EBIT)', format: 'yi_yuan', get: (d) => opProfit(d) },
+                            { label: 'Operating Margin', format: 'pct', digits: 1, get: (d) => opMargin(d), indent: 1 },
+                            { label: 'Net Income (Parent)', format: 'yi_yuan', get: (d) => parentProfit(d) },
+                            { label: 'Net Margin (Parent)', format: 'pct', digits: 1, get: (d) => netMargin(d), indent: 1 },
+                            { label: 'ROE', format: 'pct', digits: 1, get: (d) => roe(d) },
+                            { label: 'ROA', format: 'pct', digits: 1, get: (d) => roa(d) },
+                        ]
+                    });
+                }
+
+                if (currentAnalysisTab === 'ROIC') {
+                    const nopat = (d) => {
+                        const ebit = opProfit(d);
+                        const tax = toNum((byInc.get(d) || {}).income_tax);
+                        const tp = toNum((byInc.get(d) || {}).total_profit);
+                        if (ebit === null || tax === null || tp === null || tp === 0) return null;
+                        const taxRate = tax / tp;
+                        return ebit * (1 - taxRate);
+                    };
+                    const investedCapital = (d) => {
+                        const ta = assets(d);
+                        const c = cash(d) ?? 0;
+                        const cl = toNum((byBs.get(d) || {}).total_current_liab);
+                        if (ta === null || cl === null) return null;
+                        return ta - c - cl; // 近似：资产-现金-流动负债
+                    };
+                    const roic = (d) => safeDiv(nopat(d), investedCapital(d));
+
+                    sections.push({
+                        title: '▼ ROIC (approx.)',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'NOPAT (est.)', format: 'yi_yuan', get: (d) => nopat(d) },
+                            { label: 'Invested Capital (est.)', format: 'yi_yuan', get: (d) => investedCapital(d) },
+                            { label: 'ROIC (est.)', format: 'pct', digits: 1, get: (d) => roic(d) },
+                        ]
+                    });
+                }
+
+                if (currentAnalysisTab === 'Solvency') {
+                    sections.push({
+                        title: '▼ Solvency',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Current Ratio', format: 'num', digits: 2, get: (d) => currentRatio(d) },
+                            { label: 'Leverage (Liab/Assets)', format: 'pct', digits: 1, get: (d) => leverage(d) },
+                            { label: 'Total Debt / Equity', format: 'num', digits: 2, get: (d) => debtToEquity(d) },
+                            { label: 'Cash / Total Debt', format: 'num', digits: 2, get: (d) => cashToDebt(d) },
+                        ]
+                    });
+                }
+
+                analysisBoxEl.innerHTML = renderMetricsTable({ columns, sections });
+                attachSectionToggles();
+                return;
+            }
+
+            analysisBoxEl.innerHTML = '<div class="loading">该标签页暂未实现。</div>';
+        }
+
+        async function loadAnalysis(symbol) {
+            if (!symbol || !/^\d{6}$/.test(symbol)) {
+                analysisBoxEl.innerHTML = '<div class="loading">请选择或输入正确的 6 位股票代码。</div>';
+                return;
+            }
+            currentSymbol = symbol;
+            analysisData = null;
+            analysisBoxEl.innerHTML = '<div class="loading">正在从 Supabase 读取 6 张表数据并计算...</div>';
+
+            try {
+                const res = await fetch(`/api/cn-analysis?symbol=${encodeURIComponent(symbol)}`);
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data?.error || `HTTP ${res.status}`);
+                }
+                analysisData = data;
+                renderAnalysis();
+            } catch (err) {
+                analysisBoxEl.innerHTML = `<div class="loading" style="color:#b91c1c;">分析加载失败：${err.message}</div>`;
             }
         }
 
-        function updateStep(stepNum, status, message, count) {
-            const el = document.getElementById(`step-${stepNum}`);
-            const icon = el.querySelector('.icon');
-            const text = el.querySelector('.text');
+        function setView(view) {
+            currentView = view === 'ltm' ? 'ltm' : 'annual';
+            btnViewLTM.classList.toggle('active', currentView === 'ltm');
+            btnViewAnnual.classList.toggle('active', currentView === 'annual');
+            renderAnalysis();
+        }
 
-            el.className = `step-item p-3 rounded-md flex items-center active`;
-            
-            if (status === 'running') {
-                icon.innerHTML = '<i class="fas fa-spinner spinning text-blue-500"></i>';
-                if (message) text.textContent = message;
-            } else if (status === 'done') {
-                el.classList.remove('active');
-                el.classList.add('done');
-                icon.innerHTML = '<i class="fas fa-check-circle text-emerald-500"></i>';
-                if (message) text.textContent = message;
-                if (count !== undefined) text.textContent += ` (${count}条)`;
-            } else if (status === 'error') {
-                el.classList.remove('active');
-                el.classList.add('error');
-                icon.innerHTML = '<i class="fas fa-times-circle text-red-500"></i>';
-                if (message) text.textContent = message;
+        // 联想提示功能
+        function getExchangeClass(exchange) {
+            const ex = (exchange || '').toUpperCase();
+            if (['SSE', 'SZSE'].includes(ex)) return 'cn';
+            if (ex === 'HKEX') return 'hk';
+            if (['NYSE', 'NASDAQ'].includes(ex)) return 'us';
+            return '';
+        }
+
+        function renderDropdown(results) {
+            searchResults = results;
+            selectedIndex = -1;
+            if (!results || results.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            dropdown.innerHTML = results.map((item, idx) => `
+                <div class="autocomplete-item" data-index="${idx}" data-symbol="${item.symbol}">
+                    <span class="code">${item.code}</span>
+                    <span class="name">${item.name}</span>
+                    <span class="exchange ${getExchangeClass(item.exchange)}">${item.exchange}</span>
+                </div>
+            `).join('');
+            dropdown.style.display = 'block';
+        }
+
+        function selectItem(index) {
+            if (index < 0 || index >= searchResults.length) return;
+            const item = searchResults[index];
+            selectedSymbol = item.symbol;
+            symbolInput.value = `${item.code} - ${item.name}`;
+            dropdown.style.display = 'none';
+            setStatus(`已选择：${item.name}（${item.code}）`, '');
+            // 立即刷新分析（不写入任何数据）
+            loadAnalysis(item.symbol);
+        }
+
+        function updateActiveItem() {
+            const items = dropdown.querySelectorAll('.autocomplete-item');
+            items.forEach((el, idx) => {
+                el.classList.toggle('active', idx === selectedIndex);
+            });
+            if (selectedIndex >= 0 && items[selectedIndex]) {
+                items[selectedIndex].scrollIntoView({ block: 'nearest' });
             }
         }
+
+        async function searchStocks(query) {
+            if (!query || query.length < 1) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            try {
+                const res = await fetch(`/api/search-stocks?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                renderDropdown(data.results || []);
+            } catch (err) {
+                console.error('Search error:', err);
+            }
+        }
+
+        symbolInput.addEventListener('input', (e) => {
+            const value = e.target.value.trim();
+            selectedSymbol = ''; // 清除已选状态
+            if (searchTimeout) clearTimeout(searchTimeout);
+            // 输入至少1个字符就触发搜索（包括完整6位数字也显示下拉框确认）
+            if (value.length >= 1) {
+                searchTimeout = setTimeout(() => searchStocks(value), 200);
+            } else {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        symbolInput.addEventListener('keydown', (e) => {
+            if (dropdown.style.display === 'none') return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, searchResults.length - 1);
+                updateActiveItem();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                updateActiveItem();
+            } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                e.preventDefault();
+                selectItem(selectedIndex);
+            } else if (e.key === 'Escape') {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        dropdown.addEventListener('click', (e) => {
+            const item = e.target.closest('.autocomplete-item');
+            if (item) {
+                selectItem(parseInt(item.dataset.index, 10));
+            }
+        });
+
+        // 点击外部关闭下拉框
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.input-wrapper')) {
+                dropdown.style.display = 'none';
+            }
+        });
 
         async function handleSubmit() {
-            const input = document.getElementById('symbolInput');
-            const btn = document.getElementById('syncBtn');
-            const symbol = input.value.trim();
-
-            if (!symbol || symbol.length !== 6) {
-                alert('请输入正确的6位股票代码');
+            // 提取股票代码：优先使用选中的，否则从输入框提取6位数字
+            let symbol = selectedSymbol;
+            if (!symbol) {
+                const inputVal = symbolInput.value.trim();
+                const match = inputVal.match(/^(\d{6})/);
+                symbol = match ? match[1] : inputVal;
+            }
+            const skipHolderCount = document.getElementById('skipHolderCount').checked;
+            if (!symbol || !/^\d{6}$/.test(symbol)) {
+                setStatus('请选择或输入正确的6位股票代码。', 'error');
                 return;
             }
 
             btn.disabled = true;
-            btn.innerHTML = '<span>同步中...</span>';
-            resetSteps();
+            btn.textContent = '下载中...';
+            resetResult();
+            setStatus('正在验证股票代码...', '');
 
             try {
-                // Step 1: Check stock
-                updateStep(1, 'running', '正在验证股票代码...');
                 const checkRes = await fetch(`/api/check-stock?symbol=${symbol}`);
                 const checkData = await checkRes.json();
-
                 if (!checkRes.ok || !checkData.valid) {
-                    updateStep(1, 'error', checkData.error || '验证失败');
-                    btn.disabled = false;
-                    btn.innerHTML = '<span>确定</span>';
+                    setStatus(checkData.error || '验证失败', 'error');
                     return;
                 }
 
-                updateStep(1, 'done', `验证通过: ${checkData.company}`);
-                document.getElementById('companyCard').classList.remove('hidden');
-                document.getElementById('companyName').textContent = checkData.company;
-                document.getElementById('companyMarket').textContent = `代码: ${symbol} | 市场: ${checkData.exchange}`;
+                setStatus(`验证通过：${checkData.company}，开始下载数据...`, '');
 
-                // Step 2-8: Call Modal (SSE)
-                // Note: fetch doesn't natively support SSE easily without a reader, 
-                // but we can use response.body.getReader()
-                
-                const response = await fetch(MODAL_ENDPOINT, {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 600000);
+
+                const modalRes = await fetch(MODAL_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symbol })
+                    body: JSON.stringify({ symbol, skip_holder_count: skipHolderCount }),
+                    signal: controller.signal
                 });
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = '';
+                clearTimeout(timeoutId);
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n\n');
-                    buffer = lines.pop();
-
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            try {
-                                const data = JSON.parse(line.slice(6));
-                                updateStep(data.step, data.status, data.message, data.count);
-                                if (data.final) {
-                                    document.getElementById('statusMsg').textContent = '✅ 所有数据已成功同步并计算完毕';
-                                    document.getElementById('statusMsg').className = 'mt-6 text-center text-sm font-medium text-emerald-600';
-                                }
-                            } catch (e) {
-                                console.error('Parse error:', e, line);
-                            }
-                        }
-                    }
+                let result = null;
+                let rawText = '';
+                try {
+                    result = await modalRes.json();
+                } catch (err) {
+                    rawText = await modalRes.text();
                 }
 
+                if (!modalRes.ok || !result.success) {
+                    const statusLabel = `HTTP ${modalRes.status}`;
+                    const message = result?.message || rawText || '下载失败';
+                    setStatus(`${message}（${statusLabel}）`, 'error');
+                    if (result) {
+                        renderResult(result);
+                    }
+                    return;
+                }
+
+                setStatus(result.message || '下载完成', 'success');
+                renderResult(result);
+                // 下载完成后，从 Supabase 重新加载分析视图
+                await loadAnalysis(symbol);
             } catch (err) {
-                console.error('Sync error:', err);
-                document.getElementById('statusMsg').textContent = '❌ 同步发生异常: ' + err.message;
-                document.getElementById('statusMsg').className = 'mt-6 text-center text-sm font-medium text-red-600';
+                if (err.name === 'AbortError') {
+                    setStatus('请求超时（>600s）：请稍后重试', 'error');
+                } else {
+                    setStatus(`请求失败：${err.message}`, 'error');
+                }
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<span>确定</span>';
+                btn.textContent = '下载并刷新';
             }
         }
+
+        btn.addEventListener('click', handleSubmit);
+        viewBtn.addEventListener('click', async () => {
+            let symbol = selectedSymbol;
+            if (!symbol) {
+                const inputVal = symbolInput.value.trim();
+                const match = inputVal.match(/^(\d{6})/);
+                symbol = match ? match[1] : inputVal;
+            }
+            if (!symbol || !/^\d{6}$/.test(symbol)) {
+                setStatus('请选择或输入正确的6位股票代码。', 'error');
+                return;
+            }
+            setStatus('仅查看分析：正在加载...', '');
+            await loadAnalysis(symbol);
+            setStatus('分析已加载（未写入任何数据）。', 'success');
+        });
+
+        btnViewLTM.addEventListener('click', () => setView('ltm'));
+        btnViewAnnual.addEventListener('click', () => setView('annual'));
+
+        // 初始化 tabs
+        renderTabs();
     </script>
 </body>
 </html>

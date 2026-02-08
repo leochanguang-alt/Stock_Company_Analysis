@@ -37,3 +37,7 @@ finance-dashboard/
 mcp-finnhub/
 Market_Data_Import_Skill/
 cookies.txt
+.env*.local
+
+# Playwright compare artifacts
+playwright-compare*/
