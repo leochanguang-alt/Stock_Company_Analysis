@@ -97,6 +97,117 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def get_balance_sheet_keep_cols(csv_path: str) -> List[str]:
+    df = pd.read_csv(csv_path, dtype=str, low_memory=False, nrows=1)
+    df = normalize_columns(df)
+    cols = set(df.columns)
+
+    # Map Chinese meta columns to normalized meta fields and drop original Chinese names
+    if "报告日" in cols:
+        cols.remove("报告日")
+        cols.add("report_date")
+    if "数据源" in cols:
+        cols.remove("数据源")
+        cols.add("data_source")
+    if "是否审计" in cols:
+        cols.remove("是否审计")
+        cols.add("is_audited")
+    if "公告日期" in cols:
+        cols.remove("公告日期")
+        cols.add("announcement_date")
+    if "币种" in cols:
+        cols.remove("币种")
+        cols.add("currency")
+    if "类型" in cols:
+        cols.remove("类型")
+        cols.add("report_type")
+    if "更新日期" in cols:
+        cols.remove("更新日期")
+        cols.add("updated_at")
+
+    # Prefer normalized security name if abbreviated name present
+    if "security_name_abbr" in cols:
+        cols.add("security_name")
+
+    # Always ensure canonical columns exist
+    cols.update({"report_date", "symbol"})
+    return sorted(cols)
+
+
+def get_cash_flow_keep_cols(csv_path: str) -> List[str]:
+    df = pd.read_csv(csv_path, dtype=str, low_memory=False, nrows=1)
+    df = normalize_columns(df)
+    cols = set(df.columns)
+
+    # Map Chinese meta columns to normalized meta fields and drop original Chinese names
+    if "报告日" in cols:
+        cols.remove("报告日")
+        cols.add("report_date")
+    if "数据源" in cols:
+        cols.remove("数据源")
+        cols.add("data_source")
+    if "是否审计" in cols:
+        cols.remove("是否审计")
+        cols.add("is_audited")
+    if "公告日期" in cols:
+        cols.remove("公告日期")
+        cols.add("announcement_date")
+    if "币种" in cols:
+        cols.remove("币种")
+        cols.add("currency")
+    if "类型" in cols:
+        cols.remove("类型")
+        cols.add("report_type")
+    if "更新日期" in cols:
+        cols.remove("更新日期")
+        cols.add("updated_at")
+
+    # Prefer normalized security name if abbreviated name present
+    if "security_name_abbr" in cols:
+        cols.add("security_name")
+
+    # Always ensure canonical columns exist
+    cols.update({"report_date", "symbol"})
+    return sorted(cols)
+
+
+def get_income_statement_keep_cols(csv_path: str) -> List[str]:
+    df = pd.read_csv(csv_path, dtype=str, low_memory=False, nrows=1)
+    df = normalize_columns(df)
+    cols = set(df.columns)
+
+    # Map Chinese meta columns to normalized meta fields and drop original Chinese names
+    if "报告日" in cols:
+        cols.remove("报告日")
+        cols.add("report_date")
+    if "数据源" in cols:
+        cols.remove("数据源")
+        cols.add("data_source")
+    if "是否审计" in cols:
+        cols.remove("是否审计")
+        cols.add("is_audited")
+    if "公告日期" in cols:
+        cols.remove("公告日期")
+        cols.add("announcement_date")
+    if "币种" in cols:
+        cols.remove("币种")
+        cols.add("currency")
+    if "类型" in cols:
+        cols.remove("类型")
+        cols.add("report_type")
+    if "更新日期" in cols:
+        cols.remove("更新日期")
+        cols.add("updated_at")
+
+    # Prefer normalized security name if abbreviated name present
+    if "security_name_abbr" in cols:
+        cols.add("security_name")
+
+    # Always ensure canonical columns exist
+    cols.update({"report_date", "symbol"})
+    return sorted(cols)
+
+
 def to_records_financial(df: pd.DataFrame, symbol: str, keep_cols: List[str]) -> List[Dict[str, Any]]:
     df = normalize_columns(df)
     # report date
@@ -159,15 +270,22 @@ def to_records_financial(df: pd.DataFrame, symbol: str, keep_cols: List[str]) ->
         "report_date",
         "symbol",
         "secucode",
+        "security_code",
         "security_name",
+        "security_name_abbr",
         "report_date_name",
         "data_source",
         "announcement_date",
         "currency",
         "report_type",
         "opinion_type",
+        "osopinion_type",
         "updated_at",
         "is_audited",
+        "org_code",
+        "org_type",
+        "security_type_code",
+        "listing_state",
     }
 
     def should_scale(col: str) -> bool:
@@ -181,6 +299,10 @@ def to_records_financial(df: pd.DataFrame, symbol: str, keep_cols: List[str]) ->
         if "ratio" in c or "pct" in c:
             return False
         if c.endswith("_yoy") or c.endswith("_change") or c.endswith("_chg"):
+            return False
+        if "code" in c or c.endswith("_code") or c.endswith("_state"):
+            return False
+        if "name" in c:
             return False
         # counts / ranks etc should not be scaled
         # NOTE: don't use naive substring checks because "accounts_*" contains "count"
@@ -362,143 +484,10 @@ def main():
     p_t10 = os.path.join("outputs", f"{symbol}_top10_shareholders_10y.csv")
     p_hc = os.path.join("outputs", f"{symbol}_holder_count_concentration_10y.csv")
 
-    # Columns to upload (扩展以覆盖旧页三表标签页所需字段)
-    bs_keep = [
-        "report_date",
-        "symbol",
-        "secucode",
-        "security_name",
-        "report_date_name",
-        "monetaryfunds",
-        "accounts_rece",
-        "note_rece",
-        "prepayment",
-        "other_rece",
-        "inventory",
-        "other_current_asset",
-        "total_current_assets",
-        "total_noncurrent_assets",
-        "total_assets",
-        "fixed_asset",
-        "cip",
-        "intangible_asset",
-        "goodwill",
-        "long_equity_invest",
-        "defer_tax_asset",
-        "long_prepaid_expense",
-        "other_noncurrent_asset",
-        "short_loan",
-        "long_loan",
-        "bond_payable",
-        "lease_liab",
-        "noncurrent_liab_1year",
-        "accounts_payable",
-        "staff_salary_payable",
-        "tax_payable",
-        "contract_liab",
-        "other_current_liab",
-        "defer_income",
-        "defer_tax_liab",
-        "other_noncurrent_liab",
-        "total_current_liab",
-        "total_noncurrent_liab",
-        "total_liabilities",
-        "total_parent_equity",
-        "minority_equity",
-        "total_equity",
-        "share_capital",
-        "capital_reserve",
-        "unassign_rpofit",
-        "treasury_shares",
-        "other_compre_income",
-        "data_source",
-        "announcement_date",
-        "currency",
-        "report_type",
-        "updated_at",
-    ]
-    is_keep = [
-        "report_date",
-        "symbol",
-        "secucode",
-        "security_name",
-        "report_date_name",
-        "total_operate_income",
-        "operate_income",
-        "other_business_income",
-        "operate_cost",
-        "research_expense",
-        "sale_expense",
-        "manage_expense",
-        "finance_expense",
-        "operate_tax_add",
-        "interest_income",
-        "interest_expense",
-        "invest_income",
-        "invest_joint_income",
-        "nonbusiness_income",
-        "nonbusiness_expense",
-        "asset_impairment_loss",
-        "credit_impairment_loss",
-        "asset_disposal_income",
-        "noncurrent_disposal_income",
-        "noncurrent_disposal_loss",
-        "other_income",
-        "fairvalue_change_income",
-        "operate_profit",
-        "total_profit",
-        "income_tax",
-        "netprofit",
-        "parent_netprofit",
-        "minority_interest",
-        "basic_eps",
-        "diluted_eps",
-        "data_source",
-        "opinion_type",
-        "announcement_date",
-        "currency",
-        "report_type",
-        "updated_at",
-    ]
-    cf_keep = [
-        "report_date",
-        "symbol",
-        "secucode",
-        "security_name",
-        "report_date_name",
-        "netcash_operate",
-        "netcash_invest",
-        "netcash_finance",
-        "construct_long_asset",
-        "cce_add",
-        "assign_dividend_porfit",
-        "rate_change_effect",
-        "pay_all_tax",
-        "receive_tax_refund",
-        "receive_other_operate",
-        "pay_other_operate",
-        "invest_pay_cash",
-        "withdraw_invest",
-        "receive_other_invest",
-        "pay_other_invest",
-        "disposal_long_asset",
-        "disposal_subsidiary_other",
-        "buy_subsidiary_equity",
-        "obtain_subsidiary_other",
-        "accept_invest_cash",
-        "subsidiary_accept_invest",
-        "receive_loan_cash",
-        "issue_bond",
-        "receive_other_finance",
-        "pay_debt_cash",
-        "subsidiary_pay_dividend",
-        "pay_other_finance",
-        "data_source",
-        "announcement_date",
-        "currency",
-        "report_type",
-        "updated_at",
-    ]
+    # Columns to upload: keep all balance sheet columns from CSV (normalized)
+    bs_keep = get_balance_sheet_keep_cols(p_bs)
+    is_keep = get_income_statement_keep_cols(p_is)
+    cf_keep = get_cash_flow_keep_cols(p_cf)
 
     print(f"Uploading wide tables for {symbol} (years={years})")
 
