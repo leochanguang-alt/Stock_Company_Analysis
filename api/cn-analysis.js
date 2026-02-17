@@ -61,9 +61,13 @@ function toNum(v) {
   return Number.isFinite(n) ? n : null;
 }
 
-function computeTTM(rowsDesc, sumFields) {
+function computeTTM(rowsDesc, sumFields, opts = {}) {
   // rowsDesc: report_date desc
   // For each anchor quarter i, sum i..i+3 (4 quarters) on given fields.
+  // opts.takeFirst: fields where we take the value from the oldest quarter (e.g. begin_cce)
+  // opts.takeLast:  fields where we take the value from the anchor/newest quarter (e.g. end_cce)
+  const takeFirst = opts.takeFirst || [];
+  const takeLast  = opts.takeLast  || [];
   const out = [];
   for (let i = 0; i < (rowsDesc || []).length; i++) {
     const anchor = rowsDesc[i];
@@ -81,6 +85,13 @@ function computeTTM(rowsDesc, sumFields) {
         }
       }
       record[f] = ok ? s : null;
+    }
+    for (const f of takeFirst) {
+      const oldest = window[window.length - 1];
+      record[f] = toNum(oldest?.[f]);
+    }
+    for (const f of takeLast) {
+      record[f] = toNum(anchor?.[f]);
     }
     out.push(record);
   }
@@ -326,51 +337,49 @@ export default async function handler(req, res) {
     ];
     const cashSumFields = [
       // Net flows
-      'netcash_operate',
-      'netcash_invest',
-      'netcash_finance',
+      'netcash_operate', 'netcash_invest', 'netcash_finance',
+      // Net income (from cash flow statement)
+      'netprofit',
+      // D&A detail fields
+      'fa_ir_depr', 'ia_amortize', 'lpe_amortize', 'useright_asset_amortize',
+      // Non-cash adjustments
+      'invest_loss', 'defer_income_amortize',
+      'asset_impairment', 'disposal_longasset_loss', 'fa_scrap_loss',
+      'finance_expense',
+      // Working capital changes
+      'operate_rece_reduce', 'inventory_reduce', 'operate_payable_add',
+      'dt_asset_reduce', 'dt_liab_add', 'other',
       // Operating details
-      'sales_services',
-      'buy_services',
-      'pay_staff_cash',
-      'pay_all_tax',
-      'receive_tax_refund',
-      'receive_other_operate',
-      'pay_other_operate',
+      'sales_services', 'buy_services', 'pay_staff_cash',
+      'pay_all_tax', 'receive_tax_refund',
+      'receive_other_operate', 'pay_other_operate',
       // Investing details
-      'withdraw_invest',
-      'receive_invest_income',
-      'disposal_long_asset',
-      'disposal_subsidiary_other',
-      'receive_other_invest',
-      'construct_long_asset',
-      'invest_pay_cash',
-      'buy_subsidiary_equity',
-      'obtain_subsidiary_other',
-      'pay_other_invest',
+      'withdraw_invest', 'receive_invest_income',
+      'disposal_long_asset', 'disposal_subsidiary_other',
+      'receive_other_invest', 'construct_long_asset',
+      'invest_pay_cash', 'buy_subsidiary_equity',
+      'obtain_subsidiary_other', 'pay_other_invest',
       // Financing details
-      'accept_invest_cash',
-      'subsidiary_accept_invest',
-      'receive_loan_cash',
-      'issue_bond',
-      'receive_other_finance',
-      'pay_debt_cash',
-      'assign_dividend_porfit',
-      'subsidiary_pay_dividend',
+      'accept_invest_cash', 'subsidiary_accept_invest',
+      'receive_loan_cash', 'issue_bond',
+      'receive_other_finance', 'pay_debt_cash',
+      'assign_dividend_porfit', 'subsidiary_pay_dividend',
       'pay_other_finance',
+      // Other financing
+      'borrow_fund_add', 'loan_advance_add', 'loan_advance_reduce',
       // Totals
-      'total_operate_inflow',
-      'total_operate_outflow',
-      'total_invest_inflow',
-      'total_invest_outflow',
-      'total_finance_inflow',
-      'total_finance_outflow',
-      // FX / net change
-      'rate_change_effect',
-      'cce_add',
+      'total_operate_inflow', 'total_operate_outflow',
+      'total_invest_inflow', 'total_invest_outflow',
+      'total_finance_inflow', 'total_finance_outflow',
+      // FX / net change / misc
+      'rate_change_effect', 'cce_add',
+      'cce_add_other', 'cce_add_balance',
     ];
     const isTTMDesc = computeTTM(isQuarterlyDesc, incomeSumFields);
-    const cfTTMDesc = computeTTM(cfQuarterlyDesc, cashSumFields);
+    const cfTTMDesc = computeTTM(cfQuarterlyDesc, cashSumFields, {
+      takeFirst: ['begin_cce'],
+      takeLast:  ['end_cce'],
+    });
 
     // Market cap annual: pick last trading day for each year
     const mktCapAnnualDesc = groupLatestByYear(mkt_cap_10y, 'trade_date');
