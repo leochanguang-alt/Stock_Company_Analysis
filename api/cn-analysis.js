@@ -147,17 +147,25 @@ export default async function handler(req, res) {
     if (cfErr) throw cfErr;
     const cash_flow_10y = (cfRaw || []);
 
-    // Market cap: 10y（日频，默认取近 10 年，避免“数据没显示全”）
+    // Market cap: 10y（日频，分批拉取，避免服务端分页上限）
     const mktFields = ['trade_date', 'symbol', 'mkt_cap_billion_cny'];
-    const { data: mcRaw, error: mcErr } = await supabase
-      .from(TABLES.mkt_cap)
-      .select(mktFields.join(','))
-      .eq('symbol', symbol)
-      .gte('trade_date', tenYearsAgoISO)
-      .order('trade_date', { ascending: true })
-      .limit(6000);
-    if (mcErr) throw mcErr;
-    const mkt_cap_10y = (mcRaw || []).map(r => pick(r, mktFields));
+    const mkt_cap_10y = [];
+    const batchSize = 1000;
+    let offset = 0;
+    while (true) {
+      const { data: mcRaw, error: mcErr } = await supabase
+        .from(TABLES.mkt_cap)
+        .select(mktFields.join(','))
+        .eq('symbol', symbol)
+        .gte('trade_date', tenYearsAgoISO)
+        .order('trade_date', { ascending: true })
+        .range(offset, offset + batchSize - 1);
+      if (mcErr) throw mcErr;
+      if (!mcRaw || mcRaw.length === 0) break;
+      mkt_cap_10y.push(...mcRaw.map(r => pick(r, mktFields)));
+      if (mcRaw.length < batchSize) break;
+      offset += batchSize;
+    }
 
     // Holder count concentration: 10y（季度/半年度频率，取更多以便展示“全”）
     const hcFields = [
@@ -180,7 +188,7 @@ export default async function handler(req, res) {
     if (hcErr) throw hcErr;
     const holder_court_concentration_10y = (hcRaw || []).map(r => pick(r, hcFields));
 
-    // Top 10 shareholders: 取最近 12 个报告期（每期 10 行）
+    // Top 10 shareholders: 取近 10 年全部报告期
     const t10Fields = [
       'report_date',
       'symbol',
@@ -192,25 +200,24 @@ export default async function handler(req, res) {
       'change_num',
       'change_ratio',
     ];
-    const { data: t10Raw, error: t10Err } = await supabase
-      .from(TABLES.top10_shareholders)
-      .select(t10Fields.join(','))
-      .eq('symbol', symbol)
-      .order('report_date', { ascending: false })
-      .order('rank', { ascending: true })
-      .limit(600);
-    if (t10Err) throw t10Err;
-
-    // 只保留最近 N 个报告期
-    const reportDates = [];
-    for (const row of t10Raw || []) {
-      const d = row?.report_date;
-      if (d && !reportDates.includes(d)) reportDates.push(d);
-      if (reportDates.length >= 12) break;
+    const top10_shareholder_10y = [];
+    const t10BatchSize = 1000;
+    let t10Offset = 0;
+    while (true) {
+      const { data: t10Raw, error: t10Err } = await supabase
+        .from(TABLES.top10_shareholders)
+        .select(t10Fields.join(','))
+        .eq('symbol', symbol)
+        .gte('report_date', tenYearsAgoISO)
+        .order('report_date', { ascending: false })
+        .order('rank', { ascending: true })
+        .range(t10Offset, t10Offset + t10BatchSize - 1);
+      if (t10Err) throw t10Err;
+      if (!t10Raw || t10Raw.length === 0) break;
+      top10_shareholder_10y.push(...t10Raw.map(r => pick(r, t10Fields)));
+      if (t10Raw.length < t10BatchSize) break;
+      t10Offset += t10BatchSize;
     }
-    const top10_shareholder_10y = (t10Raw || [])
-      .filter(r => reportDates.includes(r.report_date))
-      .map(r => pick(r, t10Fields));
 
     // 公司名：优先从财报表里拿
     const security_name =
@@ -219,6 +226,36 @@ export default async function handler(req, res) {
       cash_flow_10y?.[0]?.security_name ||
       holder_court_concentration_10y?.[0]?.security_name ||
       null;
+
+    // 公司列表信息（用于表头展示）
+    let company_list = null;
+    try {
+      const { data: companyRows, error: companyErr } = await supabase
+        .from('company_list')
+        .select('symbol,market,description,sector,industry,exchange')
+        .eq('symbol', symbol)
+        .eq('market', 'cn')
+        .limit(1);
+      if (companyErr) throw companyErr;
+      company_list = companyRows?.[0] || null;
+    } catch {
+      company_list = null;
+    }
+
+    // 市场指标（beta 等来自 share_a_market）
+    let share_a_market = null;
+    try {
+      const { data: marketRows, error: marketErr } = await supabase
+        .from('share_a_market')
+        .select('symbol,enterprise_value,market_capitalization,beta_5_years,beta_1_year,cash_from_operating_activities_trailing_12_months,"return_on_invested_capital_%_trailing_12_months",download_date')
+        .eq('symbol', symbol)
+        .order('download_date', { ascending: false })
+        .limit(1);
+      if (marketErr) throw marketErr;
+      share_a_market = marketRows?.[0] || null;
+    } catch {
+      share_a_market = null;
+    }
 
     // Views: quarterly / annual / ltm(TTM)
     const isQuarterlyDesc = sortByDateDesc(income_statement_10y, 'report_date');
@@ -321,6 +358,8 @@ export default async function handler(req, res) {
     return res.status(200).json({
       symbol,
       security_name,
+      company_list,
+      share_a_market,
       // 你指定的表名语义
       cn_balance_sheet_1y: balance_sheet_10y,
       cn_income_statement_10y: income_statement_10y,

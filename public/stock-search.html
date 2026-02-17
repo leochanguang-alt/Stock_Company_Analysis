@@ -3,25 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>A股公司分析</title>
+    <title>Stock Anaylysis</title>
     <style>
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f5f7fb;
-            color: #1f2937;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
         }
 
         :root{
-            --bg: #f5f7fb;
-            --surface: #ffffff;
-            --border: #e5e7eb;
-            --muted: #6b7280;
-            --text: #1f2937;
-            --accent: #2563eb;
-            --accent-2: #2d5016;
+            --ft-bg: #FFF1E5;
+            --ft-bg-muted: #F7E7D8;
+            --ft-text: #111111;
+            --ft-text-muted: #6B6B6B;
+            --ft-text-faint: #9A9A9A;
+            --ft-line: #E6D6C7;
+            --ft-line-strong: #111111;
+            --ft-accent: #B22222;
+            --ft-accent-2: #0F5E9C;
+            --ft-pos: #1F7A4D;
+            --ft-neg: #B00020;
+
+            --bg: var(--ft-bg);
+            --surface: transparent;
+            --border: var(--ft-line);
+            --muted: var(--ft-text-muted);
+            --text: var(--ft-text);
+            --accent: var(--ft-accent);
+            --accent-2: var(--ft-accent-2);
         }
 
         .app {
@@ -210,25 +222,35 @@
         .main{
             flex: 1;
             padding: 18px 18px;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
         .main-header{
             display:flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 14px;
-            margin-bottom: 14px;
+            margin-bottom: 18px;
+            padding: 16px 10px 14px;
+            border-top: 6px solid var(--ft-line-strong);
+            border-bottom: 1px solid var(--border);
         }
         .main-title{
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px 16px;
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            padding: 0;
             width: 100%;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+            box-shadow: none;
         }
         .main-title h1{
-            margin: 0;
-            font-size: 18px;
+            margin: 0 0 4px 0;
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 34px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
         }
         .main-title .subline{
             margin-top: 6px;
@@ -242,109 +264,166 @@
         .view-switch{
             margin-top: 10px;
             display:flex;
-            gap: 10px;
+            gap: 4px;
             align-items: center;
             flex-wrap: wrap;
-        }
-        .view-btn{
-            padding: 8px 12px;
+            padding: 2px;
             border-radius: 999px;
             border: 1px solid var(--border);
-            background: #ffffff;
-            color: #0f172a;
+            width: fit-content;
+        }
+        .view-btn{
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            color: var(--muted);
             cursor: pointer;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
+            border-radius: 999px;
         }
+        .view-btn:hover { color: var(--text); }
         .view-btn.active{
-            border-color: rgba(37,99,235,0.35);
-            background: rgba(37,99,235,0.10);
-            color: #1d4ed8;
+            color: var(--text);
+            background: #ffffff;
         }
         .view-btn:disabled{
             opacity: 0.55;
             cursor: not-allowed;
         }
 
-        .summary-cards{
-            display:grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
-            margin-top: 12px;
+        .company-info{
+            display:flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+            color: var(--muted);
+            font-size: 12px;
         }
-        .summary-card{
+        .company-info-row{
+            display:flex;
+            align-items:center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .company-info .info-item{
+            padding: 4px 10px;
+            background: transparent;
+            border-radius: 999px;
+            color: var(--text);
+            font-weight: 500;
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 10px 12px;
-            background: #fbfdff;
+            font-size: 11px;
         }
-        .summary-card .k{ font-size: 12px; color: var(--muted); }
-        .summary-card .v{ margin-top: 6px; font-size: 14px; font-weight: 700; color: var(--text); }
-        .summary-card .s{ margin-top: 2px; font-size: 11px; color: var(--muted); }
 
         /* Tabs + table styling (borrowed from koyfin style, simplified) */
         .tabs-container{
             display:flex;
-            gap: 10px;
+            gap: 18px;
             overflow-x: auto;
-            padding: 10px 8px;
-            border-radius: 14px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+            padding: 10px 2px 6px;
+            border-radius: 0;
+            border: none;
+            border-top: 4px solid var(--ft-line-strong);
+            border-bottom: 1px solid var(--border);
+            background: transparent;
+            box-shadow: none;
         }
         .tabs-container::-webkit-scrollbar { height: 6px; }
         .tabs-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
         .tab{
             flex: 0 0 auto;
-            padding: 9px 12px;
-            border-radius: 999px;
+            padding: 8px 2px;
             cursor:pointer;
             font-size: 13px;
-            color: #475569;
-            border: 1px solid transparent;
+            color: var(--muted);
+            border: none;
             user-select:none;
             white-space: nowrap;
-        }
-        .tab:hover{ background: #f1f5f9; }
-        .tab.active{
-            background: rgba(37,99,235,0.10);
-            color: #1d4ed8;
-            border-color: rgba(37,99,235,0.25);
             font-weight: 700;
+            border-bottom: 3px solid transparent;
+        }
+        .tab:hover{ color: var(--text); }
+        .tab.active{
+            color: var(--text);
+            background: transparent;
+            border-bottom-color: var(--accent);
         }
 
         .table-container{
             margin-top: 12px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 14px;
+            background: transparent;
+            border: none;
+            border-radius: 0;
             overflow: hidden;
-            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+            box-shadow: none;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
         }
         .table-wrapper{
             overflow: auto;
-            max-height: calc(100vh - 210px);
+            max-height: none;
+            max-width: 100%;
+            width: 100%;
+            height: 100%;
         }
         table{
-            width: 100%;
+            width: max-content;
+            min-width: 100%;
             border-collapse: collapse;
             font-size: 12px;
+        }
+        th.spark-col,
+        td.spark-cell{
+            width: 46px;
+            min-width: 46px;
+        }
+        th.spark-col,
+        td.spark-cell{
+            position: sticky;
+            left: 0;
+            background: var(--bg);
+            z-index: 3;
+        }
+        .label-col{
+            position: sticky;
+            left: 0;
+            background: var(--bg);
+            z-index: 4;
+            border-right: 1px solid var(--border);
+        }
+        .has-spark .label-col{
+            left: 46px;
+        }
+        thead th.label-col{
+            z-index: 6;
+            background: var(--bg);
+        }
+        thead th.spark-col{
+            z-index: 5;
+            background: var(--bg);
         }
         thead th{
             position: sticky;
             top: 0;
-            background: #f8fafc;
+            background: var(--bg);
             border-bottom: 1px solid var(--border);
-            padding: 10px 12px;
+            padding: 14px 16px;
             text-align: right;
-            font-weight: 700;
-            color: #0f172a;
+            font-weight: 600;
+            color: var(--muted);
             white-space: nowrap;
         }
-        thead th:first-child{
+        thead th.label-col{
             text-align:left;
-            min-width: 220px;
+            min-width: 180px;
+            max-width: 220px;
+        }
+        thead th.spark-col{
+            text-align: left;
+            width: 46px;
+            min-width: 46px;
         }
         tbody td{
             border-bottom: 1px solid #f1f5f9;
@@ -353,14 +432,22 @@
             color: #0f172a;
             white-space: nowrap;
         }
-        tbody td:first-child{
+        tbody td.label-col{
             text-align:left;
             color:#0f172a;
             font-weight: 600;
+            min-width: 180px;
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        tbody td.spark-cell{
+            text-align: left;
+            padding: 6px 8px;
         }
         tr.section-header td{
-            background: #f1f5f9;
-            color:#0f172a;
+            background: var(--ft-bg-muted);
+            color: var(--text);
             font-weight: 800;
             cursor:pointer;
         }
@@ -372,6 +459,21 @@
         .val-muted{ color:#64748b; }
         .val-positive{ color:#166534; font-weight: 700; }
         .val-negative{ color:#b91c1c; font-weight: 700; }
+        .sparkline{
+            display:flex;
+            align-items:flex-end;
+            gap: 2px;
+            height: 18px;
+            width: 100%;
+        }
+        .sparkline .bar{
+            width: 4px;
+            border-radius: 2px 2px 0 0;
+            background: #94a3b8;
+            opacity: 0.85;
+        }
+        .sparkline .bar.positive{ background: #16a34a; }
+        .sparkline .bar.negative{ background: #ef4444; }
 
         .loading{
             padding: 18px 16px;
@@ -428,6 +530,66 @@
             font-size: 12px;
             font-weight: 800;
         }
+
+        /* Holders / Top10 aligned with koyfin_dashboard_002508.html */
+        .holder-strong-positive { background-color: #c8e6c9 !important; }
+        .holder-positive { background-color: #e8f5e9 !important; }
+        .holder-strong-negative { background-color: #ffcdd2 !important; }
+        .holder-negative { background-color: #ffebee !important; }
+        .top10-table{
+            font-size: 11px;
+            color: #333;
+        }
+        .top10-table th{
+            background: var(--header-bg, #f8fafc);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+            padding: 8px 6px;
+            color: #333;
+            font-weight: 600;
+        }
+        .top10-table td{
+            padding: 6px 8px;
+            text-align: center;
+            white-space: nowrap;
+            color: #333;
+        }
+        .top10-table td:first-child{
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 5;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 500;
+            color: #222;
+        }
+        .top10-table tr:hover td{ background-color: #f5f5f5 !important; }
+        .top10-table tr:hover td:first-child{ background-color: #f5f5f5 !important; }
+        .shareholder-rank{
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            line-height: 18px;
+            text-align: center;
+            border-radius: 50%;
+            font-size: 10px;
+            margin-right: 4px;
+            font-weight: bold;
+        }
+        .rank-1{ background: #ffd700; color: #333; }
+        .rank-2{ background: #c0c0c0; color: #333; }
+        .rank-3{ background: #cd7f32; color: #333; }
+        .rank-other{ background: #e0e0e0; color: #333; }
+        .change-new{ color: #c62828; font-weight: bold; }
+        .change-up{ color: #2e7d32; font-weight: bold; }
+        .change-down{ color: #c62828; font-weight: bold; }
+        .latest-column{ background-color: #fff3e0 !important; }
+        .ratio-text{ color: #333; font-weight: 500; }
 
         @media (max-width: 980px){
             .sidebar{ width: 300px; }
@@ -500,7 +662,7 @@
         <main class="main">
             <div class="main-header">
                 <div class="main-title">
-                    <h1 id="mainCompanyTitle">A股公司分析</h1>
+                    <h1 id="mainCompanyTitle">Stock Anaylysis</h1>
                     <div class="subline">
                         <span id="mainSymbol">symbol: -</span>
                         <span id="mainDate">latest: -</span>
@@ -510,21 +672,21 @@
                         <button class="view-btn" id="btnViewLTM">Last 12 Months (TTM)</button>
                         <button class="view-btn active" id="btnViewAnnual">Annual (Y)</button>
                     </div>
-                    <div class="summary-cards">
-                        <div class="summary-card">
-                            <div class="k">Market Cap</div>
-                            <div class="v" id="sumMktCap">-</div>
-                            <div class="s" id="sumMktCapDate">-</div>
+                    <div class="company-info" id="companyInfo">
+                        <div class="company-info-row">
+                            <span class="info-item">公司：-</span>
+                            <span class="info-item">Sector：-</span>
+                            <span class="info-item">Industry：-</span>
+                            <span class="info-item">Market：-</span>
                         </div>
-                        <div class="summary-card">
-                            <div class="k">Enterprise Value (估算)</div>
-                            <div class="v" id="sumEV">-</div>
-                            <div class="s">EV ≈ 市值 + 有息负债 - 现金</div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="k">P/E (估算)</div>
-                            <div class="v" id="sumPE">-</div>
-                            <div class="s">P/E ≈ 市值 / 归母净利润</div>
+                        <div class="company-info-row">
+                            <span class="info-item">EV：-</span>
+                            <span class="info-item">Market Cap：-</span>
+                            <span class="info-item">Beta 5Y：-</span>
+                            <span class="info-item">Beta 1Y：-</span>
+                            <span class="info-item">aOCF(TTM)/EV：-</span>
+                            <span class="info-item">GAP：-</span>
+                            <span class="info-item">Date：-</span>
                         </div>
                     </div>
                 </div>
@@ -545,6 +707,12 @@
         const viewBtn = document.getElementById('viewBtn');
         const btnViewLTM = document.getElementById('btnViewLTM');
         const btnViewAnnual = document.getElementById('btnViewAnnual');
+        const apiParams = new URLSearchParams(window.location.search || '');
+        const apiBaseOverride = apiParams.get('apiBase')
+            || localStorage.getItem('API_BASE_OVERRIDE')
+            || '';
+        const isFileProto = (!window.location.origin || window.location.origin === 'null' || window.location.protocol === 'file:');
+        const API_BASE = apiBaseOverride || (isFileProto ? 'https://bsa.buiservice.com' : '');
         const statusEl = document.getElementById('status');
         const resultEl = document.getElementById('result');
         const symbolInput = document.getElementById('symbolInput');
@@ -607,6 +775,7 @@
             { key: 'Solvency', label: 'Solvency' },
             { key: 'Holders', label: 'Holders' },
             { key: 'Top10Shareholders', label: 'TOP 10 Shareholder' },
+            { key: 'Model100', label: 'Model100' },
         ];
 
         function toNum(v) {
@@ -615,13 +784,25 @@
             const n = Number(v);
             return Number.isFinite(n) ? n : null;
         }
+        function sumNums(...vals) {
+            let has = false;
+            let sum = 0;
+            for (const v of vals) {
+                const n = toNum(v);
+                if (n !== null) {
+                    sum += n;
+                    has = true;
+                }
+            }
+            return has ? sum : null;
+        }
         function safeDiv(a, b) {
             const na = toNum(a), nb = toNum(b);
             if (na === null || nb === null || nb === 0) return null;
             return na / nb;
         }
         // 重要：cn_* 财报表内的金额字段按“亿元”存储（不是元）
-        // 本页三表（BS/IS/CF）与股东相关按旧页要求统一显示为 Mn（百万）：Mn = 亿元 * 100
+        // 页面统一显示为 M（百万）：M = 亿元 * 100
         function fmtMn(vYi, digits = 1) {
             const n = toNum(vYi);
             if (n === null) return '-';
@@ -639,9 +820,8 @@
             return n.toFixed(digits) + 'x';
         }
         function fmtYiYuan(v) {
-            const n = toNum(v);
-            if (n === null) return '-';
-            return n.toFixed(2) + ' 亿元';
+            // 兼容历史的 yi_yuan 格式：统一输出 M（百万）
+            return fmtMn(v, 1);
         }
         function fmtPct(v, digits = 1) {
             const n = toNum(v);
@@ -664,17 +844,44 @@
             if (n === null) return '-';
             return Math.round(n).toLocaleString('zh-CN');
         }
+        // mkt_cap_billion_cny is in Bn CNY; convert to 亿元 for consistency
+        function mktCapToYi(v) {
+            const n = toNum(v);
+            return n === null ? null : n * 10;
+        }
 
-        function getTopDates(rows, limit = 6) {
+        function getTopDates(rows, limit = 6, minYear = null) {
             const dates = (rows || []).map(r => r.report_date).filter(Boolean);
             const uniq = [];
             for (const d of dates) {
+                if (minYear) {
+                    const y = Number(yearFromISO(d));
+                    if (!y || y < minYear) continue;
+                }
                 if (!uniq.includes(d)) uniq.push(d);
                 if (uniq.length >= limit) break;
             }
             return uniq;
         }
         function yearFromISO(d) { return String(d || '').slice(0, 4); }
+        function normalizeDate(d) {
+            if (!d) return '';
+            const s = String(d).trim();
+            if (/^\d{8}$/.test(s)) {
+                return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+            }
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+                return s.slice(0, 10);
+            }
+            const dt = new Date(s);
+            if (!isNaN(dt.getTime())) {
+                const y = dt.getFullYear();
+                const m = String(dt.getMonth() + 1).padStart(2, '0');
+                const day = String(dt.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+            return s;
+        }
         function quarterFromISO(d) {
             const md = String(d || '').slice(5, 10);
             if (md === '03-31') return 1;
@@ -715,16 +922,36 @@
             });
         }
 
-        function sectionRow(sectionId, title, isCollapsed) {
+        function sectionRow(sectionId, title, isCollapsed, dataColCount, showSparkline) {
             const icon = isCollapsed ? '▶' : '▼';
+            const spark = showSparkline ? '<td class="spark-cell"></td>' : '';
             return `<tr class="section-header" data-section="${sectionId}" data-title="${title}" data-collapsed="${isCollapsed ? '1' : '0'}">
-                <td>${icon} ${title}</td>
-                <td class="val-muted" colspan="99">点击展开/收起</td>
+                ${spark}
+                <td class="label-col">${icon} ${title}</td>
+                <td class="val-muted" colspan="${dataColCount}">点击展开/收起</td>
             </tr>`;
         }
 
-        function renderMetricsTable({ columns, sections }) {
-            let html = '<table><thead><tr><th></th>';
+        function renderSparkline(values) {
+            const nums = (values || []).map(v => toNum(v));
+            const present = nums.filter(v => v !== null);
+            if (!present.length) return '';
+            const min = Math.min(...present);
+            const max = Math.max(...present);
+            const range = max - min || 1;
+            return `<div class="sparkline">${nums.map(v => {
+                if (v === null) return '<span class="bar" style="height:10%;opacity:0.2;"></span>';
+                const h = Math.max(8, Math.round(((v - min) / range) * 100));
+                const cls = v < 0 ? 'bar negative' : 'bar positive';
+                return `<span class="${cls}" style="height:${h}%;"></span>`;
+            }).join('')}</div>`;
+        }
+
+        function renderMetricsTable({ columns, sections, showSparkline = false }) {
+            const tableClass = showSparkline ? 'has-spark' : '';
+            let html = `<table class="${tableClass}"><thead><tr>`;
+            if (showSparkline) html += '<th class="spark-col"></th>';
+            html += '<th class="label-col"></th>';
             columns.forEach(c => {
                 const label = (c && typeof c === 'object') ? (c.label ?? c.key) : c;
                 html += `<th>${label}</th>`;
@@ -734,13 +961,21 @@
             for (const sec of sections) {
                 const secId = `sec_${sec.title}`.replace(/\s/g, '_');
                 const collapsed = sec.collapsed === true;
-                html += sectionRow(secId, sec.title, collapsed);
+                html += sectionRow(secId, sec.title, collapsed, columns.length, showSparkline);
                 sec.metrics.forEach(m => {
                     const classes = [];
                     if (m.indent === 1) classes.push('indent-1');
                     if (m.indent === 2) classes.push('indent-2');
+                    const rowValues = columns.map(col => {
+                        const d = (col && typeof col === 'object') ? col.key : col;
+                        return m.get(d);
+                    });
+                    const spark = showSparkline
+                        ? `<td class="spark-cell">${renderSparkline(rowValues)}</td>`
+                        : '';
                     html += `<tr data-parent="${secId}" style="${collapsed ? 'display:none;' : ''}">
-                        <td class="${classes.join(' ')}">${m.label}</td>`;
+                        ${spark}
+                        <td class="label-col ${classes.join(' ')}">${m.label}</td>`;
                     columns.forEach(col => {
                         const d = (col && typeof col === 'object') ? col.key : col;
                         const val = m.get(d);
@@ -817,7 +1052,7 @@
                 : (ltm.cash_flow_ttm || []);
 
             // 市值：用于展示/图表时仍用日频全量；Annual(Y) 视图再做压缩展示
-            const mktDaily = (ltm.mkt_cap || quarterly.mkt_cap || data?.cn_mkt_cap_10y || []);
+            const mktDaily = (data?.cn_mkt_cap_10y || []);
             const mktAnnual = (annual.mkt_cap || []);
 
             return { quarterly, annual, ltm, bsRows, incRows, cfRows, mktDaily, mktAnnual };
@@ -827,8 +1062,8 @@
         const statementTabConfigs = {
             IncomeStatement: {
                 'Revenues': [
-                    { key: 'Revenue', label: 'Total Revenues', bold: true },
-                    { key: 'Operate_Income', label: 'Revenues', indent: 1 },
+                    { key: 'Total_Revenue_Gross', label: 'Total Revenues', bold: true },
+                    { key: 'Revenue', label: 'Revenues', indent: 1 },
                     { key: 'Other_Business_Revenue', label: 'Other Revenues', indent: 1 },
                     { key: 'Main_Revenue', label: 'Revenues', indent: 1 },
                     { key: 'Other_Revenue', label: 'Other Revenues', indent: 1 },
@@ -881,11 +1116,33 @@
                     { key: 'Net_Income', label: 'Net Income', bold: true },
                     { key: 'Net_Income_Common', label: 'Net Income to Common Incl Extra Items' }
                 ],
+                'Per Share Items': [
+                    { key: 'EPS', label: 'Net EPS - Basic', format: 'num' },
+                    { key: 'EPS', label: 'Basic EPS - Continuing Operations', format: 'num' },
+                    { key: 'Shares_Outstanding', label: 'Basic Weighted Average Shares Outstanding', format: 'int' },
+                    { key: 'Diluted_EPS', label: 'Net EPS - Diluted', format: 'num' },
+                    { key: 'Diluted_EPS', label: 'Diluted EPS - Continuing Operations', format: 'num' },
+                    { key: 'Shares_Outstanding', label: 'Diluted Weighted Average Shares Outstanding', format: 'int' },
+                    { key: 'Normalized_Basic_EPS', label: 'Normalized Basic EPS', format: 'num' },
+                    { key: 'Normalized_Diluted_EPS', label: 'Normalized Diluted EPS', format: 'num' },
+                    { key: 'Dividend_Per_Share', label: 'Dividend Per Share', format: 'num' },
+                    { key: 'Payout_Ratio', label: 'Payout Ratio', format: 'pct' }
+                ],
                 'Supplemental Items': [
+                    { key: 'Total_Revenue_Gross', label: 'Total Revenues (As Reported)' },
                     { key: 'EBITDA', label: 'EBITDA', bold: true },
+                    { key: 'EBIT', label: 'EBITA' },
                     { key: 'EBIT', label: 'EBIT' },
-                    { key: 'EPS', label: 'Basic EPS', format: 'num' },
-                    { key: 'Diluted_EPS', label: 'Diluted EPS', format: 'num' }
+                    { key: 'Effective_Tax_Rate', label: 'Effective Tax Rate - (Ratio)', format: 'pct' },
+                    { key: 'Net_Income_Common', label: 'Normalized Net Income' }
+                ],
+                'Supplemental Operating Expenses Items': [
+                    { key: 'RD_Exp', label: 'Research And Development Expense From Footnotes' },
+                    { key: 'DA', label: 'D&A for EBITDA' },
+                    { key: 'Selling_Exp', label: 'Selling and Marketing Expenses' },
+                    { key: 'Admin_Exp', label: 'General and Administrative Expenses' },
+                    { key: 'Stock_Comp', label: 'Stock-Based Comp, Other (Total)' },
+                    { key: 'Stock_Comp_Total', label: 'Total Stock-Based Compensation' }
                 ]
             },
             BalanceSheet: {
@@ -893,11 +1150,13 @@
                     { key: 'Total_Cash', label: 'Total Cash And Short Term Investments', bold: true },
                     { key: 'Cash_Equivalents', label: 'Cash And Equivalents', indent: 1 },
                     { key: 'Short_Term_Investments', label: 'Short Term Investments', indent: 1 },
+                    { key: 'Trading_Asset_Securities', label: 'Trading Asset Securities', indent: 1 },
                     { key: 'Total_Receivables', label: 'Total Receivables', bold: true },
                     { key: 'Accounts_Receivable', label: 'Accounts Receivable', indent: 1 },
                     { key: 'Notes_Receivable', label: 'Notes Receivable', indent: 1 },
                     { key: 'Other_Receivables_Final', label: 'Other Receivables', indent: 1 },
                     { key: 'Inventory', label: 'Inventory' },
+                    { key: 'Restricted_Cash', label: 'Restricted Cash' },
                     { key: 'Prepaid_Expenses', label: 'Prepaid Expenses' },
                     { key: 'Contract_Assets', label: 'Contract Assets', indent: 1 },
                     { key: 'Other_Current_Assets', label: 'Other Current Assets' },
@@ -908,6 +1167,7 @@
                     { key: 'LT_Equity_Investment', label: 'Long-term Investments' },
                     { key: 'Goodwill', label: 'Goodwill' },
                     { key: 'Intangible_Assets', label: 'Other Intangibles' },
+                    { key: 'Loans_Receivable_Long_Term', label: 'Loans Receivable Long-Term' },
                     { key: 'Deferred_Tax_Asset', label: 'Deferred Tax Assets Long-Term' },
                     { key: 'LT_Prepaid_Expenses', label: 'Deferred Charges Long-Term' },
                     { key: 'Other_NonCurrent_Assets', label: 'Other Long-Term Assets' },
@@ -917,10 +1177,11 @@
                 'Liabilities': [
                     { key: 'Accounts_Payable', label: 'Accounts Payable' },
                     { key: 'Notes_Payable', label: 'Notes Payable', indent: 1 },
-                    { key: 'Employee_Benefits_Payable', label: 'Accrued Expenses' },
+                    { key: 'Accrued_Expense', label: 'Accrued Expenses' },
                     { key: 'Other_Payables', label: 'Other Payables', indent: 1 },
                     { key: 'Short_Term_Debt', label: 'Short-Term Debt', indent: 1 },
                     { key: 'Current_Portion_LT_Debt', label: 'Current Portion of Long-Term Debt', indent: 1 },
+                    { key: 'Current_Portion_Leases', label: 'Current Portion of Leases', indent: 1 },
                     { key: 'Taxes_Payable', label: 'Current Income Taxes Payable' },
                     { key: 'Unearned_Revenue_Total', label: 'Unearned Revenue Current, Total' },
                     { key: 'Contract_Liabilities', label: 'Contract Liabilities', indent: 1 },
@@ -947,7 +1208,8 @@
                     { key: 'Total_Assets', label: 'Total Liabilities And Equity', bold: true }
                 ],
                 'Supplemental Items': [
-                    { key: 'Shares_Outstanding', label: 'Total Common Shares Outstanding', format: 'int' },
+                    { key: 'Shares_Outstanding', label: 'ECS Total Shares Outstanding on Filing Date', format: 'int' },
+                    { key: 'Shares_Outstanding', label: 'ECS Total Common Shares Outstanding', format: 'int' },
                     { key: 'Book_Value_Per_Share', label: 'Book Value / Share', format: 'num' },
                     { key: 'Tangible_Book_Value', label: 'Tangible Book Value' },
                     { key: 'Tangible_BV_Per_Share', label: 'Tangible Book Value Per Share', format: 'num' },
@@ -964,9 +1226,17 @@
                 'Cash from Operations': [
                     { key: 'Net_Income', label: 'Net Income' },
                     { key: 'DA', label: 'Depreciation & Amortization, Total', indent: 1 },
+                    { key: 'Asset_Disposal_Gain', label: '(Gain) Loss on Sale of Asset', indent: 1 },
+                    { key: 'Gain_On_Investment_Sale', label: '(Gain) Loss on Sale of Investments', indent: 1 },
+                    { key: 'Amort_Deferred_Charges', label: 'Amortization of Deferred Charges, Total', indent: 1 },
+                    { key: 'Asset_Writeoff_Restructuring', label: 'Asset Writedown & Restructuring Costs', indent: 1 },
+                    { key: 'Stock_Comp', label: 'Stock-Based Compensation', indent: 1 },
                     { key: 'Change_In_AR', label: 'Change In Accounts Receivable', indent: 1 },
                     { key: 'Change_In_Inventory', label: 'Change In Inventories', indent: 1 },
                     { key: 'Change_In_AP', label: 'Change In Accounts Payable', indent: 1 },
+                    { key: 'Change_In_Unearned_Revenue', label: 'Change in Unearned Revenues', indent: 1 },
+                    { key: 'Change_In_Income_Taxes', label: 'Change in Income Taxes', indent: 1 },
+                    { key: 'Change_In_Other_Net_Operating_Assets', label: 'Change in Other Net Operating Assets', indent: 1 },
                     { key: 'Other_Operating_Activities', label: 'Other Operating Activities, Total', indent: 1 },
                     { key: 'Cash_From_Sales', label: 'Cash From Sales', indent: 2 },
                     { key: 'Cash_Paid_For_Goods', label: 'Cash Paid For Goods', indent: 2 },
@@ -983,6 +1253,7 @@
                     { key: 'Cash_Acquisitions', label: 'Cash Acquisitions', indent: 1 },
                     { key: 'Cash_Divestitures', label: 'Divestitures', indent: 1 },
                     { key: 'Investment_In_Securities', label: 'Investment in Mkt and Equity Securities, Total', indent: 1 },
+                    { key: 'Net_Increase_In_Loans', label: 'Net (Increase) Decrease in Loans Orig / Sold', indent: 1 },
                     { key: 'Other_Investing_Activities', label: 'Other Investing Activities, Total', indent: 1 },
                     { key: 'Proceeds_From_Investment_Sales', label: 'Proceeds From Investment Sales', indent: 2 },
                     { key: 'Cash_For_Investments', label: 'Cash For Investments', indent: 2 },
@@ -993,11 +1264,17 @@
                 ],
                 'Cash from Financing': [
                     { key: 'Total_Debt_Issued', label: 'Total Debt Issued', indent: 1 },
+                    { key: 'Short_Term_Debt_Issued', label: 'Short Term Debt Issued, Total', indent: 2 },
+                    { key: 'Long_Term_Debt_Issued', label: 'Long-Term Debt Issued, Total', indent: 2 },
                     { key: 'Total_Debt_Repaid', label: 'Total Debt Repaid', indent: 1 },
-                    { key: 'Proceeds_From_Equity', label: 'Issuance of Common Stock', indent: 1 },
-                    { key: 'Treasury_Stock', label: 'Repurchase of Common Stock', indent: 1 },
+                    { key: 'Short_Term_Debt_Repaid', label: 'Short Term Debt Repaid, Total', indent: 2 },
+                    { key: 'Long_Term_Debt_Repaid', label: 'Long-Term Debt Repaid, Total', indent: 2 },
+                    { key: 'Issuance_Common_Stock', label: 'Issuance of Common Stock', indent: 1 },
+                    { key: 'Repurchase_Common_Stock', label: 'Repurchase of Common Stock', indent: 1 },
                     { key: 'Dividends_Paid', label: 'Common & Preferred Stock Dividends Paid' },
                     { key: 'Common_Dividends_Paid', label: 'Common Dividends Paid', indent: 2 },
+                    { key: 'Preferred_Dividends_Paid', label: 'Preferred Dividends Paid', indent: 2 },
+                    { key: 'Special_Dividends_Paid', label: 'Special Dividends Paid', indent: 2 },
                     { key: 'Other_Financing_Activities', label: 'Other Financing Activities', indent: 1 },
                     { key: 'Loan_Proceeds', label: 'Loan Proceeds', indent: 2 },
                     { key: 'Bond_Issuance', label: 'Bond Issuance', indent: 2 },
@@ -1009,21 +1286,61 @@
                 ],
                 'Net Change in Cash': [
                     { key: 'FX_Effect', label: 'Foreign Exchange Rate Adjustments', indent: 1 },
+                    { key: 'Misc_Cash_Adjustments', label: 'Miscellaneous Cash Flow Adjustments', indent: 1 },
                     { key: 'Beginning_Cash', label: 'Beginning Cash', indent: 1 },
                     { key: 'Ending_Cash', label: 'Ending Cash', indent: 1 },
                     { key: 'Net_Change_In_Cash', label: 'Net Change in Cash', bold: true }
                 ],
                 'Supplemental Items': [
                     { key: 'FCF', label: 'Free Cash Flow', bold: true },
-                    { key: 'FCF_Per_Share', label: 'Free Cash Flow per Share' },
+                    { key: 'FCF_Per_Share', label: 'Free Cash Flow per Share', format: 'num' },
+                    { key: 'Cash_Interest_Paid', label: 'Cash Interest Paid' },
+                    { key: 'Taxes_Paid', label: 'Cash Income Tax Paid (Refund)' },
                     { key: 'Working_Capital_Change', label: 'Change In Net Working Capital' },
                     { key: 'Net_Debt_Issued', label: 'Net Debt Issued / Repaid' }
                 ]
             }
         };
 
+        const model100TabConfig = {
+            'operation analysis': [
+                { key: 'EV', label: 'Enterprise Value - EV', bold: true, format: 'mn' },
+                { key: 'Market_Cap', label: 'Market Capitalization', indent: 1, format: 'mn' },
+                { key: 'Total_Debt', label: 'Total Debt', indent: 1, format: 'mn' },
+                { key: 'Total_Debt_YoY', label: 'Debt Growth', indent: 2, format: 'pct' },
+                { key: 'Cash_Equivalents', label: 'Cash And Equivalents', indent: 1, format: 'mn' },
+                { key: 'Minority_Interest', label: 'Minority Interest (Balance Sheet)', indent: 1, format: 'mn' },
+                { key: 'Total_Assets', label: 'Total Assets', format: 'mn' },
+                { key: 'Total_Assets_YoY', label: 'Assets Growth', indent: 1, format: 'pct' },
+                { key: 'OCF', label: 'Cash from Operations', format: 'mn' },
+                { key: 'Adj_OCF', label: 'Adj. Op Cash Flow', indent: 1, format: 'mn' },
+                { key: 'Adj_OCF_YoY', label: 'Adj. Op Cash Flow Growth', indent: 2, format: 'pct' },
+                { key: 'Working_Capital_Change', label: 'Change In Net Working Capital', format: 'mn' },
+                { key: 'Total_Equity', label: 'Total Equity', format: 'mn' },
+                { key: 'Total_Equity_YoY', label: 'Equity Growth', indent: 1, format: 'pct' },
+                { key: 'Adj_Equity', label: 'Adj. Equity', indent: 1, format: 'mn' },
+                { key: 'Dividends_Paid', label: 'Common Dividends Paid', format: 'mn' },
+                { key: 'Dividends_to_MktCap', label: 'Common Dividends / Market Cap', indent: 1, format: 'pct' },
+                { key: 'Dividends_to_OCF', label: 'Common Dividends / Op Cash Flow', indent: 1, format: 'pct' },
+                { key: 'Altman_Z_Score', label: 'Altman Z-Score', format: 'num', digits: 2 },
+                { key: 'ROIC', label: 'Return on Invested Capital (ROIC)', format: 'pct' },
+                { key: 'Working_Capital', label: 'Working Capital', format: 'mn' },
+                { key: 'Revenue', label: 'Total Revenues', format: 'mn' },
+                { key: 'Rev_YoY', label: 'Revenue Growth', indent: 1, format: 'pct' },
+                { key: 'COGS', label: 'Cost Of Revenues', format: 'mn' },
+                { key: 'Gross_Profit', label: 'Gross Profit', format: 'mn' },
+                { key: 'Gross_Margin', label: 'Gross Profit Margin %', format: 'pct' }
+            ],
+            'Valuation': [
+                { key: 'Op_CF_Assets', label: 'Op CF/Assets', format: 'pct' },
+                { key: 'Op_CF_EV', label: 'Op CF/EV', format: 'pct' },
+                { key: 'Gap', label: 'Gap', format: 'pct' },
+                { key: 'MktCap_to_Equity', label: 'Mkt Cap/Equity', format: 'ratio' }
+            ]
+        };
+
         function sortByDateAsc(rows, field) {
-            return [...(rows || [])].sort((a, b) => String(a?.[field] || '').localeCompare(String(b?.[field] || '')));
+            return [...(rows || [])].sort((a, b) => normalizeDate(a?.[field]).localeCompare(normalizeDate(b?.[field])));
         }
 
         // Build "old-dashboard-like" derived rows from cn_* tables (still ONLY from 6 tables)
@@ -1033,7 +1350,10 @@
             const inc = viewKey === 'ltm' ? (views?.ltm?.income_statement_ttm || []) : (views?.annual?.income_statement || []);
             const cf = viewKey === 'ltm' ? (views?.ltm?.cash_flow_ttm || []) : (views?.annual?.cash_flow || []);
 
-            const dailyCaps = sortByDateAsc(views?.ltm?.mkt_cap || views?.quarterly?.mkt_cap || [], 'trade_date');
+            const dailyCaps = sortByDateAsc(
+                data?.cn_mkt_cap_10y || [],
+                'trade_date'
+            );
             let capIdx = 0;
             let lastCap = null;
 
@@ -1049,51 +1369,65 @@
                 const o = ensure(r?.report_date);
                 if (!o) return;
                 o.Cash_Equivalents = toNum(r.monetaryfunds);
-                o.Short_Term_Investments = null; // schema currently lacks explicit short-term investment fields
+                o.Short_Term_Investments = sumNums(
+                    r.trade_finasset,
+                    r.trade_finasset_notfvtpl,
+                    r.fvtpl_finasset,
+                    r.available_sale_finasset,
+                    r.fvtoci_finasset,
+                    r.fvtoci_ncfinasset
+                );
+                o.Trading_Asset_Securities = toNum(r.trade_finasset) ?? toNum(r.trade_finasset_notfvtpl) ?? toNum(r.fvtpl_finasset);
                 o.Contract_Assets = toNum(r.contract_asset);
                 o.Accounts_Receivable = toNum(r.accounts_rece);
                 o.Notes_Receivable = toNum(r.note_rece);
                 o.Prepaid_Expenses = toNum(r.prepayment);
                 o.Other_Receivables = toNum(r.other_rece);
                 o.Inventory = toNum(r.inventory);
-                o.Other_Current_Assets = toNum(r.other_current_asset);
-                o.Total_Current_Assets = toNum(r.total_current_assets);
-                o.Total_NonCurrent_Assets = toNum(r.total_noncurrent_assets);
+                o.Restricted_Cash = toNum(r.settle_excess_reserve);
+                o.Other_Current_Assets = toNum(r.other_current_asset) ?? toNum(r.current_asset_other);
+                o.Total_Current_Assets = toNum(r.total_current_assets) ?? toNum(r.current_asset_balance);
+                o.Total_NonCurrent_Assets = toNum(r.total_noncurrent_assets) ?? toNum(r.noncurrent_asset_balance);
                 o.Net_PPE = toNum(r.fixed_asset);
                 o.Construction_In_Progress = toNum(r.cip);
                 o.Construction_In_Progress_Total = toNum(r.cip);
+                o.Gross_PPE = sumNums(r.fixed_asset, r.cip);
+                o.Accumulated_Depreciation = toNum(r.accumulated_depreciation);
                 o.Intangible_Assets = toNum(r.intangible_asset);
                 o.Goodwill = toNum(r.goodwill);
                 o.LT_Equity_Investment = toNum(r.long_equity_invest);
+                o.Loans_Receivable_Long_Term = toNum(r.long_rece) ?? toNum(r.loan_advance);
                 o.Deferred_Tax_Asset = toNum(r.defer_tax_asset);
                 o.LT_Prepaid_Expenses = toNum(r.long_prepaid_expense);
-                o.Other_NonCurrent_Assets = toNum(r.other_noncurrent_asset);
-                o.Total_Assets = toNum(r.total_assets);
+                o.Other_NonCurrent_Assets = toNum(r.other_noncurrent_asset) ?? toNum(r.noncurrent_asset_other);
+                o.Total_Assets = toNum(r.total_assets) ?? toNum(r.asset_balance);
 
                 o.Accounts_Payable = toNum(r.accounts_payable);
                 o.Notes_Payable = toNum(r.note_payable);
+                o.Accrued_Expense = toNum(r.accrued_expense);
                 o.Employee_Benefits_Payable = toNum(r.staff_salary_payable);
                 o.Other_Payables = toNum(r.other_payable);
-                o.Short_Term_Debt = toNum(r.short_loan);
+                o.Short_Term_Debt = sumNums(r.short_loan, r.short_bond_payable, r.short_fin_payable);
                 o.Current_Portion_LT_Debt = toNum(r.noncurrent_liab_1year);
+                o.Current_Portion_Leases = toNum(r.lease_liab_1year);
                 o.Taxes_Payable = toNum(r.tax_payable);
                 o.Unearned_Revenue_Total = toNum(r.contract_liab);
                 o.Contract_Liabilities = toNum(r.contract_liab);
-                o.Other_Current_Liabilities = toNum(r.other_current_liab);
-                o.Total_Current_Liabilities = toNum(r.total_current_liab);
+                o.Other_Current_Liabilities = toNum(r.other_current_liab) ?? toNum(r.current_liab_other);
+                o.Total_Current_Liabilities = toNum(r.total_current_liab) ?? toNum(r.current_liab_balance);
                 o.Long_Payables = toNum(r.long_payable);
                 o.Long_Term_Debt = toNum(r.long_loan);
                 o.Bonds_Payable = toNum(r.bond_payable);
                 o.Lease_Liabilities = toNum(r.lease_liab);
                 o.LT_Deferred_Revenue = toNum(r.defer_income);
                 o.Deferred_Tax_Liability = toNum(r.defer_tax_liab);
-                o.Other_NonCurrent_Liabilities = toNum(r.other_noncurrent_liab);
-                o.Total_NonCurrent_Liabilities = toNum(r.total_noncurrent_liab);
-                o.Total_Liabilities = toNum(r.total_liabilities);
+                o.Other_NonCurrent_Liabilities = toNum(r.other_noncurrent_liab) ?? toNum(r.noncurrent_liab_other);
+                o.Total_NonCurrent_Liabilities = toNum(r.total_noncurrent_liab) ?? toNum(r.noncurrent_liab_balance);
+                o.Total_Liabilities = toNum(r.total_liabilities) ?? toNum(r.liab_balance);
 
-                o.Equity_Parent = toNum(r.total_parent_equity);
+                o.Equity_Parent = toNum(r.total_parent_equity) ?? toNum(r.parent_equity_balance);
                 o.Minority_Interest = toNum(r.minority_equity);
-                o.Total_Equity = toNum(r.total_equity);
+                o.Total_Equity = toNum(r.total_equity) ?? toNum(r.equity_balance);
                 o.Common_Stock = toNum(r.share_capital);
                 o.Additional_Paid_In_Capital = toNum(r.capital_reserve);
                 o.Surplus_Reserve = toNum(r.surplus_reserve);
@@ -1108,7 +1442,7 @@
                 o.Total_Revenue_Gross = toNum(r.total_operate_income);
                 o.Total_Operating_Cost = toNum(r.total_operate_cost);
                 o.Operate_Income = toNum(r.operate_income);
-                o.Revenue = toNum(r.operate_income);
+                o.Revenue = toNum(r.total_operate_income) ?? toNum(r.operate_income);
                 o.Other_Business_Revenue = toNum(r.other_business_income);
                 o.COGS = toNum(r.operate_cost);
                 o.Selling_Exp = toNum(r.sale_expense);
@@ -1121,8 +1455,8 @@
                 o.Net_Income = toNum(r.netprofit);
                 o.Net_Income_Parent = toNum(r.parent_netprofit);
                 o.Minority_Interest_Income = toNum(r.minority_interest);
-                o.Interest_Inc = toNum(r.interest_income);
-                o.Interest_Exp = toNum(r.interest_expense);
+                o.Interest_Inc = sumNums(r.interest_income, r.fe_interest_income);
+                o.Interest_Exp = sumNums(r.interest_expense, r.fe_interest_expense);
                 o.Investment_Income = toNum(r.invest_income);
                 o.Equity_Method_Income = toNum(r.invest_joint_income);
                 o.Non_Operating_Income = toNum(r.nonbusiness_income);
@@ -1142,12 +1476,30 @@
             (cf || []).forEach(r => {
                 const o = ensure(r?.report_date);
                 if (!o) return;
+                o.Net_Income = toNum(r.netprofit);
                 o.OCF = toNum(r.netcash_operate);
                 o.ICF = toNum(r.netcash_invest);
                 o.CFF = toNum(r.netcash_finance);
+                o.DA = sumNums(
+                    r.fa_ir_depr,
+                    r.ir_depr,
+                    r.ia_amortize,
+                    r.lpe_amortize,
+                    r.useright_asset_amortize,
+                    r.oilgas_biology_depr
+                );
+                o.Gain_On_Investment_Sale = toNum(r.invest_loss);
+                o.Amort_Deferred_Charges = toNum(r.defer_income_amortize);
+                o.Asset_Writeoff_Restructuring = sumNums(
+                    r.asset_impairment,
+                    r.disposal_longasset_loss,
+                    r.fa_scrap_loss
+                );
+                o.Stock_Comp = null;
                 o.CapEx = toNum(r.construct_long_asset);
                 o.Net_Change_In_Cash = toNum(r.cce_add);
                 o.FX_Effect = toNum(r.rate_change_effect);
+                o.Misc_Cash_Adjustments = sumNums(r.cce_add_other, r.cce_add_balance);
                 o.Dividends_Paid = toNum(r.assign_dividend_porfit);
                 o.Minority_Dividends_Paid = toNum(r.subsidiary_pay_dividend);
                 const paid = toNum(r.pay_all_tax);
@@ -1175,6 +1527,24 @@
                 o.Other_Financing_Cash_Out = toNum(r.pay_other_finance);
                 o.Beginning_Cash = toNum(r.begin_cce);
                 o.Ending_Cash = toNum(r.end_cce);
+
+                o.Short_Term_Debt_Issued = sumNums(r.receive_loan_cash, r.borrow_fund_add);
+                o.Long_Term_Debt_Issued = toNum(r.issue_bond);
+                o.Short_Term_Debt_Repaid = toNum(r.pay_debt_cash);
+                o.Long_Term_Debt_Repaid = toNum(r.pay_debt_cash);
+                o.Issuance_Common_Stock = toNum(r.accept_invest_cash);
+                o.Repurchase_Common_Stock = toNum(r.treasury_shares) ?? null;
+                o.Preferred_Dividends_Paid = null;
+                o.Special_Dividends_Paid = null;
+
+                o.Change_In_AR = toNum(r.operate_rece_reduce);
+                o.Change_In_Inventory = toNum(r.inventory_reduce);
+                o.Change_In_AP = toNum(r.operate_payable_add);
+                o.Change_In_Income_Taxes = toNum(r.dt_asset_reduce) ?? toNum(r.dt_liab_add);
+                o.Change_In_Other_Net_Operating_Assets = toNum(r.other);
+                o.Change_In_Unearned_Revenue = null;
+                o.Net_Increase_In_Loans = toNum(r.loan_advance_add) ?? toNum(r.loan_advance_reduce);
+                o.Cash_Interest_Paid = toNum(r.finance_expense);
             });
 
             const rowsAsc = Array.from(byDate.values()).sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)));
@@ -1182,11 +1552,11 @@
             // attach market cap
             rowsAsc.forEach(r => {
                 const d = r.report_date;
-                while (capIdx < dailyCaps.length && String(dailyCaps[capIdx]?.trade_date || '') <= String(d)) {
+                while (capIdx < dailyCaps.length && normalizeDate(dailyCaps[capIdx]?.trade_date) <= normalizeDate(d)) {
                     lastCap = dailyCaps[capIdx];
                     capIdx++;
                 }
-                r.Market_Cap = toNum(lastCap?.mkt_cap_billion_cny);
+                r.Market_Cap = mktCapToYi(lastCap?.mkt_cap_billion_cny);
             });
 
             // derived (matches old dashboard logic; missing values treated as 0)
@@ -1195,6 +1565,9 @@
                 const get = (k) => (r[k] !== null && r[k] !== undefined && !isNaN(r[k])) ? Number(r[k]) : 0;
                 const getPrev = (k) => (prev && prev[k] !== null && prev[k] !== undefined && !isNaN(prev[k])) ? Number(prev[k]) : 0;
                 const marketCapVal = (r.Market_Cap !== null && r.Market_Cap !== undefined && !isNaN(r.Market_Cap) && Number(r.Market_Cap) > 0) ? Number(r.Market_Cap) : null;
+                const ocfVal = (r.OCF !== null && r.OCF !== undefined && !isNaN(r.OCF)) ? Number(r.OCF) : null;
+                const totalAssetsVal = (r.Total_Assets !== null && r.Total_Assets !== undefined && !isNaN(r.Total_Assets)) ? Number(r.Total_Assets) : null;
+                const totalEquityVal = (r.Total_Equity !== null && r.Total_Equity !== undefined && !isNaN(r.Total_Equity)) ? Number(r.Total_Equity) : null;
 
                 r.Total_Short_Term_Borrowings = get('Short_Term_Debt') + get('Current_Portion_LT_Debt');
                 r.Total_Debt = r.Total_Short_Term_Borrowings + get('Long_Term_Debt') + get('Bonds_Payable');
@@ -1208,7 +1581,7 @@
                 r.SGA_Exp = get('Selling_Exp') + get('Admin_Exp');
                 r.Other_Operating_Exp = get('Taxes_Surcharges');
                 r.EBIT = r.Gross_Profit - get('Selling_Exp') - get('Admin_Exp') - get('RD_Exp');
-                r.DA = get('Revenue') * 0.015;
+                r.DA = get('DA') ?? (get('Revenue') * 0.015);
                 r.EBITDA = r.EBIT + r.DA;
                 r.Net_Interest_Exp = get('Fin_Exp') * -1;
                 r.Interest_And_Investment_Income = get('Interest_Inc') + get('Investment_Income');
@@ -1217,8 +1590,11 @@
                 r.Total_Impairment = get('Asset_Impairment') + get('Credit_Impairment');
                 r.Other_Unusual_Items = get('Other_Income') + get('FV_Change_Income');
                 r.EBT_Excl_Unusual = r.EBIT + r.Net_Interest_Exp;
+                r.Effective_Tax_Rate = safeDiv(get('Income_Tax_Exp'), get('Pretax_Income'));
                 r.Earnings_Continuing = get('Net_Income');
                 r.Net_Income_Common = get('Net_Income_Parent') || get('Net_Income');
+                const revSafe = get('Revenue') || null;
+                r.Gross_Margin = revSafe ? r.Gross_Profit / revSafe : null;
 
                 r.AR_Total = (get('Accounts_Receivable') || get('Notes_AR_Combined'));
                 r.AP_Total = (get('Accounts_Payable') || get('Notes_AP_Combined'));
@@ -1241,15 +1617,55 @@
 
                 r.Working_Capital = get('Total_Current_Assets') - get('Total_Current_Liabilities');
                 r.Working_Capital_Change = r.Working_Capital - (prev ? (getPrev('Working_Capital') || 0) : 0);
+                r.Adj_OCF = ocfVal !== null ? (ocfVal + r.Working_Capital_Change) : null;
                 r.FCF = get('OCF') - Math.abs(get('CapEx'));
                 r.FCF_Per_Share = r.Shares_Outstanding ? (r.FCF / r.Shares_Outstanding) : null;
                 r.Total_Debt_Issued = get('Loan_Proceeds') + get('Bond_Issuance');
                 r.Total_Debt_Repaid = get('Debt_Repayment');
                 r.Net_Debt_Issued = r.Total_Debt_Issued - Math.abs(r.Total_Debt_Repaid);
                 r.Common_Dividends_Paid = get('Dividends_Paid') - Math.abs(get('Minority_Dividends_Paid'));
+                r.Dividend_Per_Share = r.Shares_Outstanding ? (r.Common_Dividends_Paid / r.Shares_Outstanding) : null;
+                r.Payout_Ratio = get('Net_Income_Common') ? (r.Common_Dividends_Paid / get('Net_Income_Common')) : null;
+                r.Dividends_to_MktCap = marketCapVal ? (Math.abs(r.Common_Dividends_Paid || 0) / marketCapVal) : null;
+                r.Dividends_to_OCF = ocfVal ? (Math.abs(r.Common_Dividends_Paid || 0) / Math.abs(ocfVal)) : null;
                 r.Investment_In_Securities = get('Cash_For_Investments') - get('Proceeds_From_Investment_Sales');
                 r.Other_Investing_Activities = get('Other_Investing_Cash_In') - Math.abs(get('Other_Investing_Cash_Out'));
                 r.Other_Financing_Activities = get('Other_Financing_Cash_In') - Math.abs(get('Other_Financing_Cash_Out'));
+                r.Normalized_Basic_EPS = r.EPS;
+                r.Normalized_Diluted_EPS = r.Diluted_EPS;
+
+                r.Total_Capital = get('Total_Equity') + r.Total_Debt;
+                r.Adj_Equity = totalEquityVal !== null
+                    ? (totalEquityVal + Math.abs(get('Treasury_Stock')) + Math.abs(r.Common_Dividends_Paid || 0))
+                    : null;
+
+                r.NOPAT = r.EBIT - get('Income_Tax_Exp');
+                r.Invested_Capital = r.Total_Debt + get('Total_Equity') + get('Lease_Liabilities');
+                r.Avg_Invested_Capital = (r.Invested_Capital + (prev ? getPrev('Invested_Capital') : 0)) / 2;
+                r.ROIC = r.Avg_Invested_Capital ? (r.NOPAT / r.Avg_Invested_Capital) : null;
+
+                r.Op_CF_Assets = (ocfVal !== null && totalAssetsVal) ? (ocfVal / totalAssetsVal) : null;
+                r.Op_CF_EV = (ocfVal !== null && r.EV) ? (ocfVal / r.EV) : null;
+                const adjOcfForGap = r.Adj_OCF || 0;
+                const roicForGap = r.ROIC || 0;
+                const minorityForGap = get('Minority_Interest') || 0;
+                const cashForGap = get('Cash_Equivalents') || 0;
+                const debtForGap = r.Total_Debt || 0;
+                r.Gap = (marketCapVal && marketCapVal !== 0)
+                    ? (adjOcfForGap * (roicForGap * 100 + 5) - minorityForGap + cashForGap - debtForGap) / marketCapVal
+                    : null;
+                r.MktCap_to_Equity = (marketCapVal !== null && totalEquityVal) ? (marketCapVal / totalEquityVal) : null;
+
+                const totalAssetsZ = get('Total_Assets');
+                const totalLiabilitiesZ = get('Total_Liabilities');
+                const Z_X1 = totalAssetsZ ? (r.Working_Capital / totalAssetsZ) : null;
+                const Z_X2 = totalAssetsZ ? (get('Retained_Earnings') / totalAssetsZ) : null;
+                const Z_X3 = totalAssetsZ ? (r.EBIT / totalAssetsZ) : null;
+                const Z_X4 = (marketCapVal && totalLiabilitiesZ) ? (marketCapVal / totalLiabilitiesZ) : null;
+                const Z_X5 = totalAssetsZ ? (get('Revenue') / totalAssetsZ) : null;
+                r.Altman_Z_Score = (Z_X1 !== null && Z_X2 !== null && Z_X3 !== null && Z_X4 !== null && Z_X5 !== null)
+                    ? (1.2 * Z_X1 + 1.4 * Z_X2 + 3.3 * Z_X3 + 0.6 * Z_X4 + 1.0 * Z_X5)
+                    : null;
             });
 
             // addYoY like old dashboard
@@ -1260,6 +1676,10 @@
                 if (!prev) return;
                 r.Rev_YoY = pct(r.Revenue, prev.Revenue);
                 r.Gross_Profit_YoY = pct(r.Gross_Profit, prev.Gross_Profit);
+                r.Total_Debt_YoY = pct(r.Total_Debt, prev.Total_Debt);
+                r.Total_Assets_YoY = pct(r.Total_Assets, prev.Total_Assets);
+                r.Total_Equity_YoY = pct(r.Total_Equity, prev.Total_Equity);
+                r.Adj_OCF_YoY = pct(r.Adj_OCF, prev.Adj_OCF);
             });
 
             return rowsAsc.slice().sort((a, b) => String(b.report_date).localeCompare(String(a.report_date)));
@@ -1268,11 +1688,14 @@
         function renderStatementTab(tabKey, data) {
             const viewKey = currentView === 'ltm' ? 'ltm' : 'annual';
             const rowsDesc = buildStatementRowsForView(viewKey, data);
+            const rowsAsc = rowsDesc.slice().sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)));
             const cfg = statementTabConfigs[tabKey];
             if (!cfg) return '<div class="loading">No config.</div>';
 
-            const limit = currentView === 'annual' ? 18 : 8;
-            const dates = getTopDates(rowsDesc, limit);
+            const limit = currentView === 'annual' ? 50 : 40;
+            const minYear = currentView === 'annual' ? 2015 : null;
+            const dateSource = currentView === 'annual' ? rowsAsc : rowsDesc;
+            const dates = getTopDates(dateSource, limit, minYear);
             const columns = buildColumns(dates);
             const byDate = indexByDate(rowsDesc);
 
@@ -1307,7 +1730,34 @@
                 }))
             }));
 
-            return renderMetricsTable({ columns, sections });
+            return renderMetricsTable({ columns, sections, showSparkline: ['IncomeStatement', 'BalanceSheet', 'CashFlow'].includes(tabKey) });
+        }
+
+        function renderModel100Tab(data) {
+            const viewKey = currentView === 'ltm' ? 'ltm' : 'annual';
+            const rowsDesc = buildStatementRowsForView(viewKey, data);
+            const rowsAsc = rowsDesc.slice().sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)));
+
+            const limit = currentView === 'annual' ? 50 : 40;
+            const minYear = currentView === 'annual' ? 2015 : null;
+            const dateSource = currentView === 'annual' ? rowsAsc : rowsDesc;
+            const dates = getTopDates(dateSource, limit, minYear);
+            const columns = buildColumns(dates);
+            const byDate = indexByDate(rowsDesc);
+
+            const sections = Object.entries(model100TabConfig).map(([title, items]) => ({
+                title,
+                collapsed: false,
+                metrics: items.map(it => ({
+                    label: it.label,
+                    indent: it.indent || 0,
+                    format: it.format || 'yi_yuan',
+                    digits: it.digits,
+                    get: (d) => byDate.get(d)?.[it.key] ?? null,
+                }))
+            }));
+
+            return renderMetricsTable({ columns, sections, showSparkline: false });
         }
 
         function computeSummary(data) {
@@ -1319,7 +1769,7 @@
             const mc = (mktDaily || []);
             const lastMc = mc.length ? mc[mc.length - 1] : null;
 
-            const mktCapYi = toNum(lastMc?.mkt_cap_billion_cny); // 亿元
+            const mktCapYi = mktCapToYi(lastMc?.mkt_cap_billion_cny);
             const mktCap = mktCapYi;
 
             const cash = toNum(bs?.monetaryfunds);
@@ -1345,86 +1795,315 @@
             };
         }
 
+        function getLatestGap(data) {
+            const viewKey = currentView === 'ltm' ? 'ltm' : 'annual';
+            const rowsDesc = buildStatementRowsForView(viewKey, data);
+            if (!rowsDesc || !rowsDesc.length) return null;
+            for (const r of rowsDesc) {
+                const v = toNum(r?.Gap);
+                if (v !== null) return v;
+            }
+            return null;
+        }
+
         function renderHoldersTab(data) {
             const holders = data?.cn_holder_court_concentration_10y || [];
             const { mktDaily } = pickViewRows(data);
+            if (!holders.length) {
+                return '<div class="loading">股东数据加载中或无数据...</div>';
+            }
+
+            const formatHolderDate = (dateStr) => {
+                if (!dateStr) return '';
+                const s = String(dateStr);
+                if (/^\d{8}$/.test(s)) {
+                    const y = s.slice(0, 4);
+                    const m = s.slice(4, 6);
+                    const d = s.slice(6, 8);
+                    if (m === '12' && d === '31') return `CY ${y}`;
+                    return `${y}/${Number(m)}/${Number(d)}`;
+                }
+                const n = normalizeDate(s);
+                if (/^\d{4}-\d{2}-\d{2}$/.test(n)) {
+                    const y = n.slice(0, 4);
+                    const m = n.slice(5, 7);
+                    const d = n.slice(8, 10);
+                    if (m === '12' && d === '31') return `CY ${y}`;
+                    return `${y}/${Number(m)}/${Number(d)}`;
+                }
+                return s;
+            };
+            const formatHolderVal = (val, format) => {
+                if (val === null || val === undefined || isNaN(val)) return '-';
+                if (format === 'integer') return Math.round(val).toLocaleString();
+                if (format === 'decimal') return Number(val).toFixed(2);
+                if (format === 'pct_signed') {
+                    const pctVal = Number(val).toFixed(1);
+                    if (val > 0) return `<span class="val-positive">${pctVal}%</span>`;
+                    if (val < 0) return `<span class="val-negative">${pctVal}%</span>`;
+                    return `${pctVal}%`;
+                }
+                return String(val);
+            };
+            const getHolderCellClass = (val, format) => {
+                if (val === null || val === undefined || isNaN(val)) return '';
+                if (format === 'pct_signed') {
+                    if (val > 10) return 'holder-strong-positive';
+                    if (val > 0) return 'holder-positive';
+                    if (val < -10) return 'holder-strong-negative';
+                    if (val < 0) return 'holder-negative';
+                }
+                return '';
+            };
+
+            const rowsDesc = holders.slice().sort((a, b) => normalizeDate(b.report_date).localeCompare(normalizeDate(a.report_date)));
+            const reportDates = Array.from(new Set(rowsDesc.map(r => r.report_date).filter(Boolean)))
+                .sort((a, b) => normalizeDate(b).localeCompare(normalizeDate(a)));
+            const byDate = indexByDate(rowsDesc);
+
             const capsAsc = sortByDateAsc(mktDaily || [], 'trade_date');
-
-            const dates = getTopDates(holders, 12);
-            const byDate = indexByDate(holders);
-
-            // market cap at each report date (pick last trading day <= report_date)
-            const colsAsc = dates.slice().sort((a, b) => String(a).localeCompare(String(b)));
+            const colsAsc = reportDates.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
             let capIdx = 0;
             let lastCap = null;
             const capByReportDate = new Map();
             for (const d of colsAsc) {
-                while (capIdx < capsAsc.length && String(capsAsc[capIdx]?.trade_date || '') <= String(d)) {
+                while (capIdx < capsAsc.length && normalizeDate(capsAsc[capIdx]?.trade_date) <= normalizeDate(d)) {
                     lastCap = capsAsc[capIdx];
                     capIdx++;
                 }
                 capByReportDate.set(d, lastCap);
             }
 
-            return `
-                <div class="panel">
-                    <div class="panel-title">Holders (from cn_holder_court_concentration_10y)</div>
-                    <div class="panel-body" style="padding:0;">
-                        ${renderMetricsTable({
-                            columns: dates,
-                            sections: [
-                                {
-                                    title: 'Shareholder Count',
-                                    collapsed: false,
-                                    metrics: [
-                                        { label: 'Total Shareholders', format: 'int', get: (d) => byDate.get(d)?.holder_count ?? null },
-                                        { label: 'Shareholder Count Change', format: 'pct_from_100', digits: 2, get: (d) => byDate.get(d)?.holder_count_change ?? null, indent: 1 },
-                                        { label: 'Market Capitalization', format: 'mn', digits: 1, get: (d) => toNum(capByReportDate.get(d)?.mkt_cap_billion_cny) },
-                                        { label: 'Avg Shares per Holder', format: 'int', get: (d) => byDate.get(d)?.avg_hold_num ?? null },
-                                        { label: 'Avg Shares Change', format: 'pct_from_100', digits: 2, get: (d) => byDate.get(d)?.avg_hold_num_change ?? null, indent: 1 },
-                                    ]
-                                }
-                            ]
-                        })}
-                    </div>
-                </div>
-            `;
+            const processedData = reportDates.map((reportDate, idx) => {
+                const row = byDate.get(reportDate) || {};
+                const prevDate = reportDates[idx + 1];
+                const prevRow = prevDate ? byDate.get(prevDate) : null;
+                const holderCount = toNum(row.holder_count ?? row.current_holder_count ?? row.holder_total);
+                let holderChangePct = toNum(row.holder_count_change ?? row.holder_count_change_pct ?? row.holder_count_change_rate);
+                if (holderChangePct === null && prevRow) {
+                    const prevHolderCount = toNum(prevRow.holder_count ?? prevRow.current_holder_count ?? prevRow.holder_total);
+                    if (holderCount !== null && prevHolderCount) {
+                        holderChangePct = ((holderCount - prevHolderCount) / prevHolderCount) * 100;
+                    }
+                }
+
+            const marketCapYi = mktCapToYi(capByReportDate.get(reportDate)?.mkt_cap_billion_cny);
+            const prevMarketCapYi = prevDate ? mktCapToYi(capByReportDate.get(prevDate)?.mkt_cap_billion_cny) : null;
+                const marketCapChangePct = (marketCapYi !== null && prevMarketCapYi) ? ((marketCapYi - prevMarketCapYi) / prevMarketCapYi) * 100 : null;
+
+                const avgAmountPerHolder = (marketCapYi !== null && holderCount)
+                    ? (marketCapYi * 10000 / holderCount)
+                    : null;
+                const prevAvgAmount = (prevMarketCapYi !== null && prevRow && (toNum(prevRow.holder_count ?? prevRow.current_holder_count ?? prevRow.holder_total)))
+                    ? (prevMarketCapYi * 10000 / toNum(prevRow.holder_count ?? prevRow.current_holder_count ?? prevRow.holder_total))
+                    : null;
+                const avgAmountChangePct = (avgAmountPerHolder !== null && prevAvgAmount)
+                    ? ((avgAmountPerHolder - prevAvgAmount) / prevAvgAmount) * 100
+                    : (toNum(row.avg_hold_num_change ?? row.avg_shares_change_pct ?? row.avg_hold_num_change_pct) ?? null);
+
+                return {
+                    report_date: reportDate,
+                    holder_count: holderCount,
+                    holder_count_change_pct: holderChangePct,
+                    Market_Cap_Billion: marketCapYi,
+                    market_cap_change_pct: marketCapChangePct,
+                    relative_strength: null,
+                    avg_shares_per_holder: avgAmountPerHolder,
+                    avg_shares_change_pct: avgAmountChangePct,
+                    sh_index: null,
+                    sh_index_change_pct: null
+                };
+            });
+
+            const sections = {
+                '股东人数分析': [
+                    { key: 'holder_count', label: '股东总户数', bold: true, format: 'integer' },
+                    { key: 'holder_count_change_pct', label: '总户数减少率', indent: 1, format: 'pct_signed' },
+                    { key: 'Market_Cap_Billion', label: '总市值(M)', bold: true, format: 'decimal' },
+                    { key: 'market_cap_change_pct', label: '总市值增加率', indent: 1, format: 'pct_signed' },
+                    { key: 'relative_strength', label: '相对上证指数强度', format: 'pct_signed' },
+                    { key: 'avg_shares_per_holder', label: '户均持股金额(万元)', bold: true, format: 'decimal' },
+                    { key: 'avg_shares_change_pct', label: '户均持股金额增长率', indent: 1, format: 'pct_signed' }
+                ],
+                '上证指数对比': [
+                    { key: 'sh_index', label: '上证指数', format: 'integer' },
+                    { key: 'sh_index_change_pct', label: '上证指数涨跌', format: 'pct_signed' }
+                ]
+            };
+
+            let html = '<table><thead><tr><th></th>';
+            processedData.forEach(row => html += `<th>${formatHolderDate(row.report_date)}</th>`);
+            html += '</tr></thead><tbody>';
+
+            Object.entries(sections).forEach(([sectionName, metrics]) => {
+                const sectionId = `Holders_${sectionName}`.replace(/\s/g, '_');
+                html += `<tr class="section-header" data-section="${sectionId}" data-title="${sectionName}" data-collapsed="0">
+                    <td><span class="toggle-icon">▼</span>${sectionName}</td>`;
+                processedData.forEach(() => html += '<td></td>');
+                html += '</tr>';
+
+                metrics.forEach(m => {
+                    const classes = [];
+                    if (m.indent === 1) classes.push('indent-1');
+                    if (m.bold) classes.push('metric-bold');
+                    html += `<tr data-parent="${sectionId}">
+                        <td class="label-col ${classes.join(' ')}">${m.bold ? `<strong>${m.label}</strong>` : m.label}</td>`;
+                    processedData.forEach(row => {
+                        const val = row[m.key];
+                        const cellClass = getHolderCellClass(val, m.format);
+                        html += `<td class="${cellClass}">${formatHolderVal(val, m.format)}</td>`;
+                    });
+                    html += '</tr>';
+                });
+            });
+
+            html += '</tbody></table>';
+            return html;
         }
 
         function renderTop10ShareholdersTab(data) {
             const top10 = data?.cn_top10_shareholder_10y || [];
-            const latestDate = (top10?.[0]?.report_date) || null;
-            const latest = latestDate ? top10.filter(r => r.report_date === latestDate) : [];
+            if (!top10.length) return '<div class="loading">TOP 10 股东数据加载中或无数据...</div>';
 
-            return `
-                <div class="panel">
-                    <div class="panel-title">TOP 10 Shareholder (from cn_top10_shareholders_10y)${latestDate ? ` · Latest: ${latestDate}` : ''}</div>
-                    <div class="panel-body" style="padding:0;">
-                        ${latest.length ? `
-                        <table class="top10-table">
-                            <thead><tr>
-                                <th style="width:56px;">#</th>
-                                <th>Shareholder</th>
-                                <th style="width:120px;">Hold Ratio</th>
-                                <th style="width:160px;">Hold Num</th>
-                                <th style="width:160px;">Change Num</th>
-                            </tr></thead>
-                            <tbody>
-                                ${latest.map(r => `
-                                    <tr>
-                                        <td><span class="badge">${r.rank ?? '-'}</span></td>
-                                        <td title="${r.shareholder_name || ''}">${r.shareholder_name || '-'}</td>
-                                        <td>${r.hold_ratio == null ? '-' : (Number(r.hold_ratio).toFixed(2) + '%')}</td>
-                                        <td>${r.hold_num == null ? '-' : Math.round(Number(r.hold_num)).toLocaleString('en-US')}</td>
-                                        <td>${r.change_num == null ? '-' : Math.round(Number(r.change_num)).toLocaleString('en-US')}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                        ` : `<div class="loading">No TOP 10 shareholder data.</div>`}
-                    </div>
+            const reportDatesSet = new Set(top10.map(d => d.report_date));
+            const reportDates = Array.from(reportDatesSet).sort((a, b) => String(b).localeCompare(String(a)));
+
+            const latestDate = reportDates[0];
+            const latestData = top10.filter(d => d.report_date === latestDate);
+
+            const shareholdersSet = new Set(top10.map(d => d.shareholder_name).filter(Boolean));
+            const allShareholders = Array.from(shareholdersSet);
+
+            const latestRankMap = new Map();
+            const latestHoldingMap = new Map();
+            latestData.forEach(d => {
+                latestRankMap.set(d.shareholder_name, d.rank || 999);
+                latestHoldingMap.set(d.shareholder_name, d.hold_ratio || 0);
+            });
+
+            allShareholders.sort((a, b) => {
+                const rankA = latestRankMap.get(a);
+                const rankB = latestRankMap.get(b);
+                if (rankA !== undefined && rankA < 999 && rankB !== undefined && rankB < 999) return rankA - rankB;
+                if (rankA !== undefined && rankA < 999) return -1;
+                if (rankB !== undefined && rankB < 999) return 1;
+                const ratioA = latestHoldingMap.get(a) || 0;
+                const ratioB = latestHoldingMap.get(b) || 0;
+                return ratioB - ratioA;
+            });
+
+            const dataMatrix = new Map();
+            top10.forEach(d => {
+                const key = `${d.shareholder_name}_${d.report_date}`;
+                dataMatrix.set(key, {
+                    holding_ratio: d.hold_ratio,
+                    shares_held: d.hold_num,
+                    rank: d.rank,
+                    change_amount: d.change_num
+                });
+            });
+
+            const formatReportDate = (dateStr) => {
+                if (!dateStr) return '';
+                const s = String(dateStr);
+                if (/^\d{8}$/.test(s)) {
+                    const year = s.slice(0, 4);
+                    const month = s.slice(4, 6);
+                    const day = s.slice(6, 8);
+                    if (month === '12' && day === '31') return `CY ${year}`;
+                    const quarterMap = { '03': 'Q1', '06': 'Q2', '09': 'Q3', '12': 'Q4' };
+                    const quarter = quarterMap[month] || month;
+                    return `${year}${quarter}`;
+                }
+                const n = normalizeDate(s);
+                if (/^\d{4}-\d{2}-\d{2}$/.test(n)) {
+                    const year = n.slice(0, 4);
+                    const month = n.slice(5, 7);
+                    const day = n.slice(8, 10);
+                    if (month === '12' && day === '31') return `CY ${year}`;
+                    const quarterMap = { '03': 'Q1', '06': 'Q2', '09': 'Q3', '12': 'Q4' };
+                    const quarter = quarterMap[month] || month;
+                    return `${year}${quarter}`;
+                }
+                return s;
+            };
+            const formatRatio = (val) => {
+                if (val === null || val === undefined || isNaN(val)) return '-';
+                return Number(val).toFixed(2) + '%';
+            };
+            const formatShares = (val) => {
+                if (val === null || val === undefined || isNaN(val)) return '-';
+                const num = Number(val);
+                if (num >= 1e8) return (num / 1e8).toFixed(2) + '亿';
+                if (num >= 1e4) return (num / 1e4).toFixed(2) + '万';
+                return num.toLocaleString();
+            };
+            const getCellStyle = (ratio) => {
+                if (ratio === null || ratio === undefined || isNaN(ratio)) return 'color: #333;';
+                const r = Number(ratio);
+                if (r >= 20) return 'background-color: #1565c0; color: #000; font-weight: 600;';
+                if (r >= 10) return 'background-color: #42a5f5; color: #000; font-weight: 600;';
+                if (r >= 5) return 'background-color: #90caf9; color: #333;';
+                if (r >= 2) return 'background-color: #bbdefb; color: #333;';
+                if (r > 0) return 'background-color: #e3f2fd; color: #333;';
+                return 'color: #333;';
+            };
+
+            let html = `<table class="top10-table"><thead><tr><th style="min-width: 180px;">股东名称</th>`;
+            reportDates.forEach((date, idx) => {
+                const isLatest = idx === 0;
+                html += `<th class="${isLatest ? 'latest-column' : ''}">${formatReportDate(date)}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            allShareholders.forEach(shareholder => {
+                html += `<tr><td title="${shareholder}">${shareholder}</td>`;
+                reportDates.forEach((date, idx) => {
+                    const isLatest = idx === 0;
+                    const key = `${shareholder}_${date}`;
+                    const cellData = dataMatrix.get(key);
+                    if (cellData) {
+                        const style = getCellStyle(cellData.holding_ratio);
+                        const rankClass = cellData.rank === 1 ? 'rank-1'
+                            : cellData.rank === 2 ? 'rank-2'
+                                : cellData.rank === 3 ? 'rank-3' : 'rank-other';
+                        let changeIndicator = '';
+                        if (cellData.change_amount) {
+                            const changeStr = String(cellData.change_amount);
+                            if (changeStr === '新进' || changeStr.includes('新进')) {
+                                changeIndicator = '<span class="change-new">新</span>';
+                            } else if (changeStr.startsWith('-') || changeStr.includes('减')) {
+                                changeIndicator = '<span class="change-down">↓</span>';
+                            } else if (changeStr !== '不变' && changeStr !== '0' && !changeStr.startsWith('0')) {
+                                changeIndicator = '<span class="change-up">↑</span>';
+                            }
+                        }
+                        const title = `${shareholder}\n持股: ${formatShares(cellData.shares_held)}\n比例: ${formatRatio(cellData.holding_ratio)}\n名次: ${cellData.rank}\n变动: ${cellData.change_amount || '-'}`;
+                        html += `<td class="${isLatest ? 'latest-column' : ''}" style="${style}" title="${title}">
+                            <span class="shareholder-rank ${rankClass}">${cellData.rank}</span>
+                            <span class="ratio-text">${formatRatio(cellData.holding_ratio)}</span>
+                            ${changeIndicator}
+                        </td>`;
+                    } else {
+                        html += `<td class="${isLatest ? 'latest-column' : ''}">-</td>`;
+                    }
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            html += `
+                <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 11px;">
+                    <strong>图例说明：</strong>
+                    <span style="margin-left: 15px;"><span class="shareholder-rank rank-1">1</span> 第1大股东</span>
+                    <span style="margin-left: 10px;"><span class="shareholder-rank rank-2">2</span> 第2大股东</span>
+                    <span style="margin-left: 10px;"><span class="shareholder-rank rank-3">3</span> 第3大股东</span>
+                    <span style="margin-left: 15px; color: #e53935; font-weight: bold;">新</span> 新进
+                    <span style="margin-left: 10px; color: #43a047;">↑</span> 增持
+                    <span style="margin-left: 10px; color: #e53935;">↓</span> 减持
+                    <span style="margin-left: 15px;">背景颜色深浅表示持股比例高低</span>
                 </div>
             `;
+            return html;
         }
 
         function renderAnalysis() {
@@ -1438,14 +2117,48 @@
             const { quarterly, annual, ltm, bsRows, incRows, cfRows, mktDaily, mktAnnual } = pickViewRows(analysisData);
 
             const summary = computeSummary(analysisData);
-            document.getElementById('mainCompanyTitle').textContent = analysisData.security_name ? `${analysisData.security_name}` : 'A股公司分析';
+            document.getElementById('mainCompanyTitle').textContent = 'Stock Anaylysis';
             document.getElementById('mainSymbol').textContent = `symbol: ${analysisData.symbol || '-'}`;
             document.getElementById('mainDate').textContent = `latest: ${summary.latestReportDate || '-'}`;
             document.getElementById('mainHint').textContent = `View: ${currentView === 'annual' ? 'Annual(Y)' : 'Last 12M (TTM)'} · 数据来源：仅 6 张表`;
-            document.getElementById('sumMktCap').textContent = summary.mktCapYi == null ? '-' : fmtYiYuan(summary.mktCapYi);
-            document.getElementById('sumMktCapDate').textContent = summary.mktCapDate ? `trade_date: ${summary.mktCapDate}` : '-';
-            document.getElementById('sumEV').textContent = summary.evYi == null ? '-' : fmtYiYuan(summary.evYi);
-            document.getElementById('sumPE').textContent = summary.pe == null ? '-' : fmtNum(summary.pe, 1);
+
+            const infoEl = document.getElementById('companyInfo');
+            const companyInfo = analysisData.company_list || {};
+            const marketInfo = analysisData.share_a_market || {};
+            const companyName = companyInfo.description || analysisData.security_name || analysisData.company_name || '-';
+            const sectorName = companyInfo.sector || analysisData.sector || analysisData.industry_sector || '-';
+            const industryName = companyInfo.industry || analysisData.industry || '-';
+            const marketName = companyInfo.market || companyInfo.exchange || analysisData.market || analysisData.exchange || '-';
+            const beta5yRaw = marketInfo.beta_5_years ?? analysisData.beta_5y ?? analysisData.beta5y;
+            const beta1yRaw = marketInfo.beta_1_year ?? analysisData.beta_1y ?? analysisData.beta1y;
+            const beta5y = toNum(beta5yRaw) == null ? '-' : fmtNum(beta5yRaw, 2);
+            const beta1y = toNum(beta1yRaw) == null ? '-' : fmtNum(beta1yRaw, 2);
+            const gapVal = getLatestGap(analysisData);
+            const aocfEv = summary.ocfEvPct == null ? '-' : fmtPct(summary.ocfEvPct, 1);
+            const evStr = summary.evYi == null ? '-' : fmtYiYuan(summary.evYi);
+            const mcStr = summary.mktCapYi == null ? '-' : fmtYiYuan(summary.mktCapYi);
+            const gapStr = gapVal == null ? '-' : fmtPct(gapVal, 1);
+            const dateStr = summary.mktCapDate || summary.latestReportDate || '-';
+
+            if (infoEl) {
+                infoEl.innerHTML = `
+                    <div class="company-info-row">
+                        <span class="info-item">公司：${companyName}</span>
+                        <span class="info-item">Sector：${sectorName}</span>
+                        <span class="info-item">Industry：${industryName}</span>
+                        <span class="info-item">Market：${marketName}</span>
+                    </div>
+                    <div class="company-info-row">
+                        <span class="info-item">EV：${evStr}</span>
+                        <span class="info-item">Market Cap：${mcStr}</span>
+                        <span class="info-item">Beta 5Y：${beta5y ?? '-'}</span>
+                        <span class="info-item">Beta 1Y：${beta1y ?? '-'}</span>
+                        <span class="info-item">aOCF(TTM)/EV：${aocfEv}</span>
+                        <span class="info-item">GAP：${gapStr}</span>
+                        <span class="info-item">Date：${dateStr}</span>
+                    </div>
+                `;
+            }
 
             if (currentAnalysisTab === 'Holders') {
                 analysisBoxEl.innerHTML = renderHoldersTab(analysisData);
@@ -1454,6 +2167,11 @@
             }
             if (currentAnalysisTab === 'Top10Shareholders') {
                 analysisBoxEl.innerHTML = renderTop10ShareholdersTab(analysisData);
+                attachSectionToggles();
+                return;
+            }
+            if (currentAnalysisTab === 'Model100') {
+                analysisBoxEl.innerHTML = renderModel100Tab(analysisData);
                 attachSectionToggles();
                 return;
             }
@@ -1477,8 +2195,11 @@
             }
 
             if (currentAnalysisTab === 'Multiples' || currentAnalysisTab === 'EnterpriseValue' || currentAnalysisTab === 'Profitability' || currentAnalysisTab === 'ROIC' || currentAnalysisTab === 'Solvency' || currentAnalysisTab === 'Highlights') {
-                const showCols = currentView === 'annual' ? 10 : 8;
-                const columns = getTopDates(incRows, showCols);
+                const showCols = currentView === 'annual' ? 10 : 40;
+                const rowsAscForCols = (currentView === 'annual')
+                    ? (incRows || []).slice().sort((a, b) => normalizeDate(a.report_date).localeCompare(normalizeDate(b.report_date)))
+                    : (incRows || []);
+                const columns = getTopDates(rowsAscForCols, showCols, currentView === 'annual' ? 2015 : null);
                 const byBs = indexByDate(bsRows);
                 const byInc = indexByDate(incRows);
                 const byCf = indexByDate(cfRows);
@@ -1487,13 +2208,13 @@
                 const capsAsc = (mktDaily || [])
                     .filter(r => r?.trade_date && r?.mkt_cap_billion_cny != null)
                     .slice()
-                    .sort((a, b) => String(a.trade_date).localeCompare(String(b.trade_date)));
-                const colsAsc = columns.slice().sort((a, b) => String(a).localeCompare(String(b)));
+                    .sort((a, b) => normalizeDate(a.trade_date).localeCompare(normalizeDate(b.trade_date)));
+                const colsAsc = columns.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
                 let capIdx = 0;
                 let lastCapRow = null;
                 const capByReportDate = new Map();
                 for (const d of colsAsc) {
-                    while (capIdx < capsAsc.length && String(capsAsc[capIdx].trade_date) <= String(d)) {
+                    while (capIdx < capsAsc.length && normalizeDate(capsAsc[capIdx].trade_date) <= normalizeDate(d)) {
                         lastCapRow = capsAsc[capIdx];
                         capIdx++;
                     }
@@ -1515,7 +2236,7 @@
                     return (c - p) / Math.abs(p);
                 };
 
-                const cap = (d) => toNum(capByReportDate.get(d)?.mkt_cap_billion_cny);
+                const cap = (d) => mktCapToYi(capByReportDate.get(d)?.mkt_cap_billion_cny);
                 const cash = (d) => toNum(byBs.get(d)?.monetaryfunds);
                 const minority = (d) => toNum(byBs.get(d)?.minority_equity);
                 const totalDebt = (d) => {
@@ -1524,7 +2245,6 @@
                         toNum(bs.short_loan),
                         toNum(bs.long_loan),
                         toNum(bs.bond_payable),
-                        toNum(bs.lease_liab),
                         toNum(bs.noncurrent_liab_1year),
                     ].filter(v => v !== null);
                     if (!parts.length) return null;
@@ -1561,25 +2281,141 @@
                 const netMargin = (d) => safeDiv(parentProfit(d), revenue(d));
                 const roe = (d) => safeDiv(parentProfit(d), equity(d));
                 const roa = (d) => safeDiv(parentProfit(d), assets(d));
-
-                // Old page approximates D&A as 1.5% of revenue
-                const ebitda = (d) => {
-                    const ebit = opProfit(d);
-                    const rev = revenue(d);
-                    if (ebit === null || rev === null) return null;
-                    return ebit + rev * 0.015;
+                const avg = (curr, prev) => {
+                    const c = toNum(curr);
+                    const p = toNum(prev);
+                    if (c === null && p === null) return null;
+                    if (c === null) return p;
+                    if (p === null) return c;
+                    return (c + p) / 2;
                 };
-                const ebitdaMargin = (d) => safeDiv(ebitda(d), revenue(d));
+                const receivables = (d) => {
+                    const bs = byBs.get(d) || {};
+                    return sumNums(bs.accounts_rece, bs.note_rece, bs.other_rece);
+                };
+                const inventory = (d) => toNum((byBs.get(d) || {}).inventory);
+                const accountsPayable = (d) => toNum((byBs.get(d) || {}).accounts_payable);
+                const netPpe = (d) => toNum((byBs.get(d) || {}).fixed_asset);
 
                 const ocf = (d) => toNum((byCf.get(d) || {}).netcash_operate);
                 const capex = (d) => toNum((byCf.get(d) || {}).construct_long_asset);
                 const eps = (d) => toNum((byInc.get(d) || {}).diluted_eps ?? (byInc.get(d) || {}).basic_eps);
 
+                const calcEbit = (d) => {
+                    const gp = grossProfit(d);
+                    const inc = byInc.get(d) || {};
+                    const sell = toNum(inc.sale_expense) ?? 0;
+                    const admin = toNum(inc.manage_expense) ?? 0;
+                    const rd = toNum(inc.research_expense) ?? 0;
+                    if (gp === null) return null;
+                    return gp - sell - admin - rd;
+                };
+
+                const calcDA = (d, prevD) => {
+                    const bs = byBs.get(d) || {};
+                    const bsPrev = prevD ? (byBs.get(prevD) || {}) : {};
+                    const accumCurr = toNum(bs.accumulated_depreciation);
+                    const accumPrev = toNum(bsPrev.accumulated_depreciation);
+                    if (accumCurr !== null && accumPrev !== null) {
+                        const daFromAccum = accumCurr - accumPrev;
+                        if (daFromAccum > 0) return daFromAccum;
+                    }
+                    const ppeCurr = (toNum(bs.fixed_asset) ?? 0) + (toNum(bs.cip) ?? 0);
+                    const ppePrev = prevD ? ((toNum(bsPrev.fixed_asset) ?? 0) + (toNum(bsPrev.cip) ?? 0)) : 0;
+                    const cx = capex(d);
+                    if (ppePrev > 0 && cx !== null) {
+                        const daFromPpe = ppePrev + Math.abs(cx) - ppeCurr;
+                        if (daFromPpe > 0) return daFromPpe;
+                    }
+                    const rev = revenue(d);
+                    return rev !== null ? rev * 0.015 : null;
+                };
+
+                const ebitda = (d) => {
+                    const ebit = calcEbit(d);
+                    const da = calcDA(d, prevDateOf(d));
+                    if (ebit === null) return null;
+                    return ebit + (da ?? 0);
+                };
+                const ebitdaMargin = (d) => safeDiv(ebitda(d), revenue(d));
+
                 const pe = (d) => safeDiv(cap(d), parentProfit(d));
                 const ps = (d) => safeDiv(cap(d), revenue(d));
+                const tangibleBook = (d) => {
+                    const bs = byBs.get(d) || {};
+                    const te = toNum(bs.total_equity) ?? toNum(bs.equity_balance);
+                    const goodwill = toNum(bs.goodwill);
+                    const intang = toNum(bs.intangible_asset);
+                    if (te === null) return null;
+                    return te - (goodwill ?? 0) - (intang ?? 0);
+                };
                 const pb = (d) => safeDiv(cap(d), equity(d));
+                const ptbv = (d) => safeDiv(cap(d), tangibleBook(d));
                 const evSales = (d) => safeDiv(ev(d), revenue(d));
                 const ocfYield = (d) => safeDiv(ocf(d), ev(d));
+                const quickRatio = (d) => {
+                    const bs = byBs.get(d) || {};
+                    const currentLiab = toNum(bs.total_current_liab);
+                    if (currentLiab === null) return null;
+                    const cashLike = sumNums(bs.monetaryfunds, bs.trade_finasset, bs.trade_finasset_notfvtpl, bs.fvtpl_finasset);
+                    const recv = receivables(d);
+                    const quick = sumNums(cashLike, recv);
+                    return safeDiv(quick, currentLiab);
+                };
+                const recTurnover = (d) => {
+                    const prev = prevDateOf(d);
+                    return safeDiv(revenue(d), avg(receivables(d), prev ? receivables(prev) : null));
+                };
+                const invTurnover = (d) => {
+                    const prev = prevDateOf(d);
+                    return safeDiv(cogs(d), avg(inventory(d), prev ? inventory(prev) : null));
+                };
+                const faTurnover = (d) => {
+                    const prev = prevDateOf(d);
+                    return safeDiv(revenue(d), avg(netPpe(d), prev ? netPpe(prev) : null));
+                };
+                const assetTurnover = (d) => {
+                    const prev = prevDateOf(d);
+                    return safeDiv(revenue(d), avg(assets(d), prev ? assets(prev) : null));
+                };
+                const dso = (d) => {
+                    const t = recTurnover(d);
+                    return t ? (365 / t) : null;
+                };
+                const dio = (d) => {
+                    const t = invTurnover(d);
+                    return t ? (365 / t) : null;
+                };
+                const dpo = (d) => {
+                    const prev = prevDateOf(d);
+                    const avgAp = avg(accountsPayable(d), prev ? accountsPayable(prev) : null);
+                    const t = safeDiv(cogs(d), avgAp);
+                    return t ? (365 / t) : null;
+                };
+                const ccc = (d) => {
+                    const a = dso(d);
+                    const b = dio(d);
+                    const c = dpo(d);
+                    if (a === null || b === null || c === null) return null;
+                    return a + b - c;
+                };
+
+                const proj = (curr, prev) => {
+                    const c = toNum(curr);
+                    const p = toNum(prev);
+                    if (c === null) return null;
+                    if (p === null || p === 0) return c;
+                    return c * (1 + (c - p) / Math.abs(p));
+                };
+                const revNTM = (d) => proj(revenue(d), revenue(prevDateOf(d)));
+                const profitNTM = (d) => proj(parentProfit(d), parentProfit(prevDateOf(d)));
+                const ebitdaNTM = (d) => proj(ebitda(d), ebitda(prevDateOf(d)));
+                const ebitNTM = (d) => proj(opProfit(d), opProfit(prevDateOf(d)));
+                const evSalesNTM = (d) => safeDiv(ev(d), revNTM(d));
+                const psNTM = (d) => safeDiv(cap(d), revNTM(d));
+                const evEbitdaNTM = (d) => safeDiv(ev(d), ebitdaNTM(d));
+                const evEbitNTM = (d) => safeDiv(ev(d), ebitNTM(d));
+                const peNTM = (d) => safeDiv(cap(d), profitNTM(d));
 
                 const currentRatio = (d) => {
                     const bs = byBs.get(d) || {};
@@ -1633,38 +2469,90 @@
 
                 if (currentAnalysisTab === 'Multiples') {
                     sections.push({
-                        title: '▼ Multiples',
+                        title: '▼ Sales / Revenues',
                         collapsed: false,
                         metrics: [
-                            // 对齐旧页行名（LTM）
+                            { label: 'EV / Sales (LTM)', format: 'num', digits: 1, get: (d) => evSales(d) },
+                            { label: 'EV / Sales (NTM)', format: 'num', digits: 1, get: (d) => evSalesNTM(d) },
+                            { label: 'Price / Sales (LTM)', format: 'num', digits: 1, get: (d) => ps(d) },
+                            { label: 'Price / Sales (NTM)', format: 'num', digits: 1, get: (d) => psNTM(d) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Earnings',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'EV / EBITDA (LTM)', format: 'num', digits: 1, get: (d) => safeDiv(ev(d), ebitda(d)) },
+                            { label: 'EV / EBITDA (NTM)', format: 'num', digits: 1, get: (d) => evEbitdaNTM(d) },
+                            { label: 'EV / EBIT (LTM)', format: 'num', digits: 1, get: (d) => safeDiv(ev(d), opProfit(d)) },
+                            { label: 'EV / EBIT (NTM)', format: 'num', digits: 1, get: (d) => evEbitNTM(d) },
                             { label: 'Price / Earnings (LTM)', format: 'num', digits: 1, get: (d) => pe(d) },
-                            { label: 'Price / Sales (LTM)', format: 'num', digits: 2, get: (d) => ps(d) },
-                            { label: 'Price / Book (LTM)', format: 'num', digits: 2, get: (d) => pb(d) },
-                            { label: 'EV / Sales (LTM)', format: 'num', digits: 2, get: (d) => evSales(d) },
-                            { label: 'EV / EBITDA (LTM)', format: 'num', digits: 2, get: (d) => safeDiv(ev(d), ebitda(d)) },
-                            { label: 'EV / EBIT (LTM)', format: 'num', digits: 2, get: (d) => safeDiv(ev(d), opProfit(d)) },
-                            // TBV 需要无形资产/商誉字段；暂时按缺失返回 null（后续可补齐）
-                            { label: 'Price / Tangible Book Value (LTM)', format: 'num', digits: 2, get: () => null },
+                            { label: 'Price / Earnings (NTM)', format: 'num', digits: 1, get: (d) => peNTM(d) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Book Value',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Price / Book (LTM)', format: 'num', digits: 1, get: (d) => pb(d) },
+                            { label: 'Price / Tangible Book Value (LTM)', format: 'num', digits: 1, get: (d) => ptbv(d) },
                         ]
                     });
                 }
 
                 if (currentAnalysisTab === 'EnterpriseValue') {
+                    const preferred = (d) => null;
+                    const totalCapital = (d) => {
+                        const te = equity(d);
+                        const td = totalDebt(d);
+                        if (te === null && td === null) return null;
+                        return (te ?? 0) + (td ?? 0) + (preferred(d) ?? 0);
+                    };
+                    const returnOnTotalCapital = (d) => safeDiv(parentProfit(d), totalCapital(d));
+                    const totalDebtToTotalCapital = (d) => safeDiv(totalDebt(d), totalCapital(d));
+                    const totalDebtToEquity = (d) => safeDiv(totalDebt(d), equity(d));
+                    const totalDebtToEbitda = (d) => safeDiv(totalDebt(d), ebitda(d));
+                    const longTermDebtToTotalCapital = (d) => {
+                        const bs = byBs.get(d) || {};
+                        const ltd = toNum(bs.long_loan) ?? 0;
+                        return safeDiv(ltd, totalCapital(d));
+                    };
+
                     sections.push({
-                        title: '▼ Enterprise Value',
+                        title: '▼ Capital Structure',
                         collapsed: false,
                         metrics: [
-                            { label: 'Market Cap', format: 'yi_yuan', get: (d) => cap(d) },
-                            { label: 'Cash & Equivalents', format: 'yi_yuan', get: (d) => cash(d) },
-                            { label: 'Total Debt (est.)', format: 'yi_yuan', get: (d) => totalDebt(d) },
+                            { label: 'Market Capitalization', format: 'yi_yuan', get: (d) => cap(d) },
+                            { label: 'Cash & Short Term Investments', format: 'yi_yuan', get: (d) => sumNums(cash(d), byBs.get(d)?.trade_finasset, byBs.get(d)?.trade_finasset_notfvtpl, byBs.get(d)?.fvtpl_finasset) },
+                            { label: 'Total Debt', format: 'yi_yuan', get: (d) => totalDebt(d) },
+                            { label: 'Preferred Equity', format: 'yi_yuan', get: (d) => preferred(d) },
                             { label: 'Minority Interest', format: 'yi_yuan', get: (d) => minority(d) },
-                            { label: 'EV', format: 'yi_yuan', get: (d) => ev(d) },
-                            { label: 'Net Debt', format: 'yi_yuan', get: (d) => {
-                                const debt = totalDebt(d);
-                                const c = cash(d);
-                                if (debt === null || c === null) return null;
-                                return debt - c;
-                            }},
+                            { label: 'Enterprise Value', format: 'yi_yuan', get: (d) => ev(d) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Enterprise Value Multiples',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'EV / Sales', format: 'num', digits: 1, get: (d) => evSales(d) },
+                            { label: 'EV / EBITDA', format: 'num', digits: 1, get: (d) => safeDiv(ev(d), ebitda(d)) },
+                            { label: 'EV / EBIT', format: 'num', digits: 1, get: (d) => safeDiv(ev(d), opProfit(d)) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Capitalization',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Total Capital', format: 'yi_yuan', get: (d) => totalCapital(d) },
+                            { label: 'Total Common Equity', format: 'yi_yuan', get: (d) => equity(d) },
+                            { label: 'Total Preferred Equity', format: 'yi_yuan', get: (d) => preferred(d) },
+                            { label: 'Total Debt', format: 'yi_yuan', get: (d) => totalDebt(d) },
+                            { label: 'Minority Interest', format: 'yi_yuan', get: (d) => minority(d) },
+                            { label: 'Return on Total Capital', format: 'pct', digits: 1, get: (d) => returnOnTotalCapital(d) },
+                            { label: 'Total Debt / Total Capital', format: 'pct', digits: 1, get: (d) => totalDebtToTotalCapital(d) },
+                            { label: 'Total Debt / Equity', format: 'pct', digits: 1, get: (d) => totalDebtToEquity(d) },
+                            { label: 'Total Debt / EBITDA', format: 'num', digits: 1, get: (d) => totalDebtToEbitda(d) },
+                            { label: 'Long-Term Debt / Total Capital', format: 'pct', digits: 1, get: (d) => longTermDebtToTotalCapital(d) },
                         ]
                     });
                 }
@@ -1687,48 +2575,178 @@
                 }
 
                 if (currentAnalysisTab === 'ROIC') {
+                    const ebit = (d) => calcEbit(d);
+                    const incomeTax = (d) => toNum((byInc.get(d) || {}).income_tax);
                     const nopat = (d) => {
-                        const ebit = opProfit(d);
-                        const tax = toNum((byInc.get(d) || {}).income_tax);
-                        const tp = toNum((byInc.get(d) || {}).total_profit);
-                        if (ebit === null || tax === null || tp === null || tp === 0) return null;
-                        const taxRate = tax / tp;
-                        return ebit * (1 - taxRate);
+                        const e = ebit(d);
+                        const tax = incomeTax(d);
+                        if (e === null || tax === null) return null;
+                        return e - tax;
                     };
+                    const longTermDebt = (d) => toNum((byBs.get(d) || {}).long_loan);
+                    const shortTermDebt = (d) => toNum((byBs.get(d) || {}).short_loan);
+                    const totalEquity = (d) => {
+                        const bs = byBs.get(d) || {};
+                        return toNum(bs.total_equity) ?? toNum(bs.total_parent_equity);
+                    };
+                    const currentPortionLeases = (d) => {
+                        const bs = byBs.get(d) || {};
+                        return toNum(bs.noncurrent_liab_1year) ?? toNum(bs.lease_liab_1year);
+                    };
+                    const longTermLeases = (d) => toNum((byBs.get(d) || {}).lease_liab);
                     const investedCapital = (d) => {
-                        const ta = assets(d);
-                        const c = cash(d) ?? 0;
-                        const cl = toNum((byBs.get(d) || {}).total_current_liab);
-                        if (ta === null || cl === null) return null;
-                        return ta - c - cl; // 近似：资产-现金-流动负债
+                        const bs = byBs.get(d) || {};
+                        return sumNums(
+                            bs.long_loan,
+                            bs.short_loan,
+                            totalEquity(d),
+                            currentPortionLeases(d),
+                            bs.lease_liab
+                        );
                     };
-                    const roic = (d) => safeDiv(nopat(d), investedCapital(d));
+                    const avgInvestedCapital = (d) => {
+                        const prev = prevDateOf(d);
+                        return avg(investedCapital(d), prev ? investedCapital(prev) : null);
+                    };
+                    const roic = (d) => safeDiv(nopat(d), avgInvestedCapital(d));
 
                     sections.push({
-                        title: '▼ ROIC (approx.)',
+                        title: '▼ Return on Invested Capital (ROIC) = (EBIT - Income Tax) / Average Invested Capital',
                         collapsed: false,
                         metrics: [
-                            { label: 'NOPAT (est.)', format: 'yi_yuan', get: (d) => nopat(d) },
-                            { label: 'Invested Capital (est.)', format: 'yi_yuan', get: (d) => investedCapital(d) },
-                            { label: 'ROIC (est.)', format: 'pct', digits: 1, get: (d) => roic(d) },
+                            { label: 'Net Operating Profit After Tax (NOPAT)', format: 'mn', get: (d) => nopat(d) },
+                            { label: 'Invested Capital, Average', format: 'mn', get: (d) => avgInvestedCapital(d) },
+                            { label: 'ROIC', format: 'pct', digits: 1, get: (d) => roic(d) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Net Operating Profit After Tax (NOPAT)',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'EBIT', format: 'mn', get: (d) => ebit(d) },
+                            { label: 'Income Tax Expense', format: 'mn', get: (d) => incomeTax(d) },
+                            { label: 'Net Operating Profit After Tax (NOPAT)', format: 'mn', get: (d) => nopat(d) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Average Invested Capital',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Long Term Debt', format: 'mn', get: (d) => longTermDebt(d) },
+                            { label: 'Short Term Debt', format: 'mn', get: (d) => shortTermDebt(d) },
+                            { label: 'Total Equity', format: 'mn', get: (d) => totalEquity(d) },
+                            { label: 'Current Portion of Leases', format: 'mn', get: (d) => currentPortionLeases(d) },
+                            { label: 'Long Term Leases', format: 'mn', get: (d) => longTermLeases(d) },
+                            { label: 'Invested Capital', format: 'mn', get: (d) => investedCapital(d) },
+                            { label: 'Invested Capital, Average', format: 'mn', get: (d) => avgInvestedCapital(d) },
                         ]
                     });
                 }
 
                 if (currentAnalysisTab === 'Solvency') {
+                    const shortTermDebt = (d) => {
+                        const bs = byBs.get(d) || {};
+                        return sumNums(bs.short_loan, bs.noncurrent_liab_1year, bs.lease_liab_1year);
+                    };
+                    const longTermDebt = (d) => {
+                        const bs = byBs.get(d) || {};
+                        return sumNums(bs.long_loan, bs.bond_payable, bs.lease_liab);
+                    };
+                    const totalCapital = (d) => {
+                        const te = equity(d);
+                        const td = totalDebt(d);
+                        if (te === null && td === null) return null;
+                        return (te ?? 0) + (td ?? 0);
+                    };
+                    const totalLiabToAssets = (d) => safeDiv(toNum((byBs.get(d) || {}).total_liabilities), assets(d));
+                    const totalDebtToCapital = (d) => safeDiv(totalDebt(d), totalCapital(d));
+                    const longTermDebtToEquity = (d) => safeDiv(longTermDebt(d), equity(d));
+                    const longTermDebtToCapital = (d) => safeDiv(longTermDebt(d), totalCapital(d));
+
+                    const interestExp = (d) => {
+                        const inc = byInc.get(d) || {};
+                        return sumNums(inc.interest_expense, inc.fe_interest_expense);
+                    };
+                    const ebitdaMinusCapex = (d) => {
+                        const e = ebitda(d);
+                        const c = capex(d);
+                        if (e === null || c === null) return null;
+                        return e - c;
+                    };
+                    const netDebt = (d) => {
+                        const td = totalDebt(d);
+                        if (td === null) return null;
+                        return td - (cash(d) ?? 0);
+                    };
+
+                    const workingCapital = (d) => {
+                        const bs = byBs.get(d) || {};
+                        const ca = toNum(bs.total_current_assets);
+                        const cl = toNum(bs.total_current_liab);
+                        if (ca === null || cl === null) return null;
+                        return ca - cl;
+                    };
+                    const retainedEarnings = (d) => {
+                        const bs = byBs.get(d) || {};
+                        return toNum(bs.undistributed_profit ?? bs.retained_profit ?? bs.surplus_reserve);
+                    };
+                    const altmanZ = (d) => {
+                        const ta = assets(d);
+                        const tl = toNum((byBs.get(d) || {}).total_liabilities);
+                        const wc = workingCapital(d);
+                        const re = retainedEarnings(d);
+                    const ebit = calcEbit(d);
+                        const mve = cap(d);
+                        const sales = revenue(d);
+                        if (ta === null || tl === null || wc === null || re === null || ebit === null || mve === null || sales === null) return null;
+                        if (ta === 0 || tl === 0) return null;
+                        return 1.2 * (wc / ta) + 1.4 * (re / ta) + 3.3 * (ebit / ta) + 0.6 * (mve / tl) + 1.0 * (sales / ta);
+                    };
+
                     sections.push({
-                        title: '▼ Solvency',
+                        title: '▼ Debt Analysis',
                         collapsed: false,
                         metrics: [
-                            { label: 'Current Ratio', format: 'num', digits: 2, get: (d) => currentRatio(d) },
-                            { label: 'Leverage (Liab/Assets)', format: 'pct', digits: 1, get: (d) => leverage(d) },
-                            { label: 'Total Debt / Equity', format: 'num', digits: 2, get: (d) => debtToEquity(d) },
-                            { label: 'Cash / Total Debt', format: 'num', digits: 2, get: (d) => cashToDebt(d) },
+                            { label: 'Total Debt / Equity', format: 'pct', digits: 1, get: (d) => debtToEquity(d) },
+                            { label: 'Total Debt / Capital', format: 'pct', digits: 1, get: (d) => totalDebtToCapital(d) },
+                            { label: 'Long-Term Debt / Equity', format: 'pct', digits: 1, get: (d) => longTermDebtToEquity(d) },
+                            { label: 'Long-Term Debt / Capital', format: 'pct', digits: 1, get: (d) => longTermDebtToCapital(d) },
+                            { label: 'Total Liabilities / Total Assets', format: 'pct', digits: 1, get: (d) => totalLiabToAssets(d) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Interest Rate Coverage',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'EBIT / Interest Expense', format: 'ratio', digits: 1, get: (d) => safeDiv(opProfit(d), interestExp(d)) },
+                            { label: 'EBITDA / Interest Expense', format: 'ratio', digits: 1, get: (d) => safeDiv(ebitda(d), interestExp(d)) },
+                            { label: '(EBITDA - Capex) / Interest Expense', format: 'ratio', digits: 1, get: (d) => safeDiv(ebitdaMinusCapex(d), interestExp(d)) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Debt Coverage',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Total Debt / EBITDA', format: 'ratio', digits: 1, get: (d) => safeDiv(totalDebt(d), ebitda(d)) },
+                            { label: 'Net Debt / EBITDA', format: 'ratio', digits: 1, get: (d) => safeDiv(netDebt(d), ebitda(d)) },
+                            { label: 'Total Debt / (EBITDA - Capex)', format: 'ratio', digits: 1, get: (d) => safeDiv(totalDebt(d), ebitdaMinusCapex(d)) },
+                            { label: 'Net Debt / (EBITDA - Capex)', format: 'ratio', digits: 1, get: (d) => safeDiv(netDebt(d), ebitdaMinusCapex(d)) },
+                        ]
+                    });
+                    sections.push({
+                        title: '▼ Bankruptcy Risk',
+                        collapsed: false,
+                        metrics: [
+                            { label: 'Altman Z-Score', format: 'num', digits: 2, get: (d) => altmanZ(d) },
                         ]
                     });
                 }
 
-                analysisBoxEl.innerHTML = renderMetricsTable({ columns, sections });
+                analysisBoxEl.innerHTML = renderMetricsTable({
+                    columns,
+                    sections,
+                    showSparkline: ['Multiples', 'EnterpriseValue', 'Solvency', 'ROIC'].includes(currentAnalysisTab)
+                });
                 attachSectionToggles();
                 return;
             }
@@ -1737,16 +2755,17 @@
         }
 
         async function loadAnalysis(symbol) {
-            if (!symbol || !/^\d{6}$/.test(symbol)) {
+            const normSymbol = (symbol || '').toLowerCase().replace(/\.(sh|sz)$/i, '');
+            if (!normSymbol || !/^\d{6}$/.test(normSymbol)) {
                 analysisBoxEl.innerHTML = '<div class="loading">请选择或输入正确的 6 位股票代码。</div>';
                 return;
             }
-            currentSymbol = symbol;
+            currentSymbol = normSymbol;
             analysisData = null;
             analysisBoxEl.innerHTML = '<div class="loading">正在从 Supabase 读取 6 张表数据并计算...</div>';
 
             try {
-                const res = await fetch(`/api/cn-analysis?symbol=${encodeURIComponent(symbol)}`);
+                const res = await fetch(`${API_BASE}/api/cn-analysis?symbol=${encodeURIComponent(normSymbol)}`);
                 const data = await res.json();
                 if (!res.ok) {
                     throw new Error(data?.error || `HTTP ${res.status}`);
@@ -1818,7 +2837,7 @@
                 return;
             }
             try {
-                const res = await fetch(`/api/search-stocks?q=${encodeURIComponent(query)}`);
+                const res = await fetch(`${API_BASE}/api/search-stocks?q=${encodeURIComponent(query)}`);
                 const data = await res.json();
                 renderDropdown(data.results || []);
             } catch (err) {
@@ -1890,7 +2909,7 @@
             setStatus('正在验证股票代码...', '');
 
             try {
-                const checkRes = await fetch(`/api/check-stock?symbol=${symbol}`);
+                const checkRes = await fetch(`${API_BASE}/api/check-stock?symbol=${symbol}`);
                 const checkData = await checkRes.json();
                 if (!checkRes.ok || !checkData.valid) {
                     setStatus(checkData.error || '验证失败', 'error');
