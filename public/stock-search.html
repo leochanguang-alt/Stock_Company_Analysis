@@ -399,13 +399,15 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            min-height: 0;
         }
         .table-wrapper{
             overflow: auto;
             max-height: none;
             max-width: 100%;
             width: 100%;
-            height: 100%;
+            flex: 1;
+            min-height: 0;
         }
         table{
             width: max-content;
@@ -923,15 +925,17 @@
 
         function getTopDates(rows, limit = 6, minYear = null) {
             const dates = (rows || []).map(r => r.report_date).filter(Boolean);
+            const seen = new Set();
             const uniq = [];
             for (const d of dates) {
                 if (minYear) {
                     const y = Number(yearFromISO(d));
                     if (!y || y < minYear) continue;
                 }
-                if (!uniq.includes(d)) uniq.push(d);
-                if (uniq.length >= limit) break;
+                if (!seen.has(d)) { seen.add(d); uniq.push(d); }
             }
+            uniq.sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
+            if (limit && uniq.length > limit) return uniq.slice(uniq.length - limit);
             return uniq;
         }
         function yearFromISO(d) { return String(d || '').slice(0, 4); }
@@ -1766,7 +1770,7 @@
             if (!cfg) return '<div class="loading">No config.</div>';
 
             const limit = currentView === 'annual' ? 50 : 40;
-            const minYear = currentView === 'annual' ? 2015 : null;
+            const minYear = 2015;
             const rawDates = getTopDates(rowsAsc, limit, minYear);
             const sortedDates = rawDates.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
             const columns = buildColumns(sortedDates);
@@ -1812,7 +1816,7 @@
             const rowsAsc = rowsDesc.slice().sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)));
 
             const limit = currentView === 'annual' ? 50 : 40;
-            const minYear = currentView === 'annual' ? 2015 : null;
+            const minYear = 2015;
             const rawDates = getTopDates(rowsAsc, limit, minYear);
             const sortedDates = rawDates.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
             const columns = buildColumns(sortedDates);
@@ -2407,7 +2411,7 @@
             if (currentAnalysisTab === 'Multiples' || currentAnalysisTab === 'EnterpriseValue' || currentAnalysisTab === 'Profitability' || currentAnalysisTab === 'ROIC' || currentAnalysisTab === 'Solvency' || currentAnalysisTab === 'Highlights') {
                 const showCols = currentView === 'annual' ? 10 : 40;
                 const rowsAscForCols = (incRows || []).slice().sort((a, b) => normalizeDate(a.report_date).localeCompare(normalizeDate(b.report_date)));
-                const rawCols = getTopDates(rowsAscForCols, showCols, currentView === 'annual' ? 2015 : null);
+                const rawCols = getTopDates(rowsAscForCols, showCols, 2015);
                 const columns = rawCols.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
                 const byBs = indexByDate(bsRows);
                 const byInc = indexByDate(incRows);
