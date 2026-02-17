@@ -41,66 +41,78 @@
             min-height: 100vh;
         }
 
-        /* Sidebar */
+        /* Sidebar – FT style */
         .sidebar{
             width: 320px;
-            background: #0b1220;
-            color: #e5e7eb;
+            background: var(--ft-bg-muted);
+            color: var(--ft-text);
             display:flex;
             flex-direction: column;
             padding: 16px;
             gap: 14px;
+            border-right: 1px solid var(--ft-line);
         }
         .brand{
             display:flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 12px;
-            border-radius: 12px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.08);
+            padding: 12px 0;
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            border-bottom: 4px solid var(--ft-line-strong);
         }
         .brand .title{
-            font-size: 14px;
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 16px;
             font-weight: 700;
             letter-spacing: 0.2px;
+            color: var(--ft-text);
         }
         .brand .sub{
             font-size: 12px;
-            color: rgba(229,231,235,0.75);
+            color: var(--ft-text-muted);
             margin-top: 2px;
         }
 
         .nav{
             display:flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px;
         }
         .nav-item{
             padding: 10px 12px;
-            border-radius: 10px;
+            border-radius: 0;
             cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.08);
-            background: rgba(255,255,255,0.04);
-            color: #e5e7eb;
+            border: none;
+            border-left: 3px solid transparent;
+            background: transparent;
+            color: var(--ft-text);
             font-size: 14px;
             user-select: none;
         }
+        .nav-item:hover{
+            background: rgba(0,0,0,0.04);
+        }
         .nav-item.active{
-            border-color: rgba(37,99,235,0.55);
-            background: rgba(37,99,235,0.18);
+            border-left-color: var(--ft-accent);
+            background: rgba(0,0,0,0.06);
+            font-weight: 600;
         }
 
         .sidebar-card{
-            border: 1px solid rgba(255,255,255,0.08);
-            background: rgba(255,255,255,0.04);
-            border-radius: 12px;
-            padding: 12px;
+            border: none;
+            border-top: 1px solid var(--ft-line);
+            background: transparent;
+            border-radius: 0;
+            padding: 12px 0;
         }
         .sidebar-card h3{
             margin: 0 0 10px;
-            font-size: 13px;
-            color: rgba(229,231,235,0.9);
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 14px;
+            color: var(--ft-text);
+            font-weight: 700;
             letter-spacing: 0.2px;
         }
 
@@ -116,15 +128,18 @@
         input[type="text"] {
             width: 100%;
             padding: 10px 12px;
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 10px;
+            border: 1px solid var(--ft-line);
+            border-radius: 0;
             font-size: 14px;
-            background: rgba(255,255,255,0.06);
-            color: #e5e7eb;
+            background: #fff;
+            color: var(--ft-text);
             outline: none;
         }
+        input[type="text"]:focus{
+            border-color: var(--ft-line-strong);
+        }
         input[type="text"]::placeholder{
-            color: rgba(229,231,235,0.55);
+            color: var(--ft-text-faint);
         }
 
         .autocomplete-dropdown {
@@ -132,34 +147,34 @@
             top: 100%;
             left: 0;
             right: 0;
-            background: #0f172a;
-            border: 1px solid rgba(255,255,255,0.14);
+            background: #fff;
+            border: 1px solid var(--ft-line);
             border-top: none;
-            border-radius: 0 0 8px 8px;
+            border-radius: 0;
             max-height: 280px;
             overflow-y: auto;
             z-index: 100;
-            box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
         .autocomplete-item {
             padding: 10px 14px;
             cursor: pointer;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid var(--ft-line);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .autocomplete-item:last-child { border-bottom: none; }
         .autocomplete-item:hover, .autocomplete-item.active {
-            background: rgba(37,99,235,0.16);
+            background: rgba(0,0,0,0.04);
         }
         .autocomplete-item .code {
             font-weight: 600;
-            color: #93c5fd;
+            color: var(--ft-accent-2);
             font-size: 14px;
         }
         .autocomplete-item .name {
-            color: rgba(229,231,235,0.9);
+            color: var(--ft-text);
             font-size: 13px;
             flex: 1;
             margin-left: 12px;
@@ -170,45 +185,51 @@
         .autocomplete-item .exchange {
             font-size: 11px;
             padding: 2px 6px;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.08);
-            color: rgba(229,231,235,0.75);
+            border-radius: 2px;
+            background: var(--ft-bg-muted);
+            color: var(--ft-text-muted);
         }
-        .autocomplete-item .exchange.cn { background: rgba(34,197,94,0.18); color: #86efac; }
-        .autocomplete-item .exchange.hk { background: rgba(245,158,11,0.18); color: #fcd34d; }
-        .autocomplete-item .exchange.us { background: rgba(59,130,246,0.18); color: #93c5fd; }
+        .autocomplete-item .exchange.cn { background: rgba(31,122,77,0.12); color: var(--ft-pos); }
+        .autocomplete-item .exchange.hk { background: rgba(178,34,34,0.1); color: var(--ft-accent); }
+        .autocomplete-item .exchange.us { background: rgba(15,94,156,0.1); color: var(--ft-accent-2); }
 
         button {
             padding: 10px 12px;
             border: none;
-            border-radius: 10px;
-            background: var(--accent);
+            border-radius: 0;
+            background: var(--ft-line-strong);
             color: #fff;
             font-size: 14px;
             cursor: pointer;
             white-space: nowrap;
+            font-weight: 600;
+        }
+        button:hover{
+            background: #333;
         }
         button:disabled {
-            background: #94a3b8;
+            background: var(--ft-line);
+            color: var(--ft-text-faint);
             cursor: not-allowed;
         }
         .status {
             padding: 10px 12px;
-            border-radius: 10px;
+            border-radius: 0;
             font-size: 13px;
             margin-bottom: 10px;
-            background: rgba(255,255,255,0.06);
-            color: rgba(229,231,235,0.85);
+            background: var(--ft-bg-muted);
+            color: var(--ft-text-muted);
+            border-left: 3px solid var(--ft-line);
         }
-        .status.success { background: rgba(34,197,94,0.14); color: #86efac; }
-        .status.error { background: rgba(239,68,68,0.14); color: #fca5a5; }
+        .status.success { background: rgba(31,122,77,0.08); color: var(--ft-pos); border-left-color: var(--ft-pos); }
+        .status.error { background: rgba(176,0,32,0.08); color: var(--ft-neg); border-left-color: var(--ft-neg); }
 
         .result-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px 16px;
             font-size: 12px;
-            color: rgba(229,231,235,0.86);
+            color: var(--ft-text);
         }
         .hidden { display: none; }
 
@@ -264,28 +285,32 @@
         .view-switch{
             margin-top: 10px;
             display:flex;
-            gap: 4px;
-            align-items: center;
+            gap: 0;
+            align-items: stretch;
             flex-wrap: wrap;
-            padding: 2px;
-            border-radius: 999px;
-            border: 1px solid var(--border);
+            padding: 0;
+            border-radius: 0;
+            border: none;
+            border-bottom: 1px solid var(--ft-line);
             width: fit-content;
         }
         .view-btn{
             padding: 8px 16px;
             border: none;
             background: transparent;
-            color: var(--muted);
+            color: var(--ft-text-muted);
             cursor: pointer;
             font-size: 12px;
             font-weight: 600;
-            border-radius: 999px;
+            border-radius: 0;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px;
         }
-        .view-btn:hover { color: var(--text); }
+        .view-btn:hover { color: var(--ft-text); }
         .view-btn.active{
-            color: var(--text);
-            background: #ffffff;
+            color: var(--ft-text);
+            background: transparent;
+            border-bottom-color: var(--ft-accent);
         }
         .view-btn:disabled{
             opacity: 0.55;
@@ -303,17 +328,26 @@
         .company-info-row{
             display:flex;
             align-items:center;
-            gap: 8px;
+            gap: 4px 16px;
             flex-wrap: wrap;
         }
+        .company-info-row .info-sep{
+            color: var(--ft-line);
+            font-size: 12px;
+        }
         .company-info .info-item{
-            padding: 4px 10px;
+            padding: 3px 0;
             background: transparent;
-            border-radius: 999px;
-            color: var(--text);
+            border-radius: 0;
+            color: var(--ft-text);
             font-weight: 500;
-            border: 1px solid var(--border);
-            font-size: 11px;
+            border: none;
+            font-size: 12px;
+        }
+        .company-info .info-item .info-label{
+            color: var(--ft-text-muted);
+            font-weight: 400;
+            margin-right: 4px;
         }
 
         /* Tabs + table styling (borrowed from koyfin style, simplified) */
@@ -329,8 +363,13 @@
             background: transparent;
             box-shadow: none;
         }
-        .tabs-container::-webkit-scrollbar { height: 6px; }
-        .tabs-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 8px; }
+        .tabs-container::-webkit-scrollbar { height: 5px; }
+        .tabs-container::-webkit-scrollbar-thumb { background: var(--ft-line); border-radius: 4px; }
+        .tabs-container::-webkit-scrollbar-track { background: transparent; }
+
+        .table-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
+        .table-wrapper::-webkit-scrollbar-thumb { background: var(--ft-line); border-radius: 4px; }
+        .table-wrapper::-webkit-scrollbar-track { background: transparent; }
         .tab{
             flex: 0 0 auto;
             padding: 8px 2px;
@@ -425,16 +464,17 @@
             width: 46px;
             min-width: 46px;
         }
+        tbody tr:hover td{ background: rgba(0,0,0,0.04); }
         tbody td{
-            border-bottom: 1px solid #f1f5f9;
+            border-bottom: 1px solid var(--ft-line);
             padding: 9px 12px;
             text-align: right;
-            color: #0f172a;
+            color: var(--ft-text);
             white-space: nowrap;
         }
         tbody td.label-col{
             text-align:left;
-            color:#0f172a;
+            color: var(--ft-text);
             font-weight: 600;
             min-width: 180px;
             max-width: 220px;
@@ -447,18 +487,19 @@
         }
         tr.section-header td{
             background: var(--ft-bg-muted);
-            color: var(--text);
-            font-weight: 800;
+            color: var(--ft-text);
+            font-weight: 700;
+            font-family: Georgia, "Times New Roman", Times, serif;
             cursor:pointer;
         }
         tr.section-header td:first-child{
-            font-weight: 800;
+            font-weight: 700;
         }
-        .indent-1{ padding-left: 14px !important; font-weight: 500 !important; color:#334155 !important;}
-        .indent-2{ padding-left: 26px !important; font-weight: 500 !important; color:#475569 !important;}
-        .val-muted{ color:#64748b; }
-        .val-positive{ color:#166534; font-weight: 700; }
-        .val-negative{ color:#b91c1c; font-weight: 700; }
+        .indent-1{ padding-left: 14px !important; font-weight: 500 !important; color: var(--ft-text-muted) !important;}
+        .indent-2{ padding-left: 26px !important; font-weight: 500 !important; color: var(--ft-text-faint) !important;}
+        .val-muted{ color: var(--ft-text-faint); }
+        .val-positive{ color: var(--ft-pos); font-weight: 700; }
+        .val-negative{ color: var(--ft-neg); font-weight: 700; }
         .sparkline{
             display:flex;
             align-items:flex-end;
@@ -469,46 +510,76 @@
         .sparkline .bar{
             width: 4px;
             border-radius: 2px 2px 0 0;
-            background: #94a3b8;
+            background: var(--ft-text-faint);
             opacity: 0.85;
         }
-        .sparkline .bar.positive{ background: #16a34a; }
-        .sparkline .bar.negative{ background: #ef4444; }
+        .sparkline .bar.positive{ background: var(--ft-pos); }
+        .sparkline .bar.negative{ background: var(--ft-neg); }
 
         .loading{
             padding: 18px 16px;
-            color: var(--muted);
+            color: var(--ft-text-muted);
             font-size: 13px;
+            font-family: Georgia, "Times New Roman", Times, serif;
         }
 
-        /* Shareholders extra */
+        /* Shareholders extra – FT style */
         .shareholders-grid{
             display:grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 12px;
-            padding: 12px;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px 0 0;
         }
         .panel{
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            border: none;
+            border-top: 4px solid var(--ft-line-strong);
+            border-radius: 0;
             overflow:hidden;
-            background: #fff;
+            background: transparent;
         }
         .panel .panel-title{
-            padding: 10px 12px;
-            background: #f8fafc;
-            border-bottom: 1px solid var(--border);
-            font-size: 12px;
-            font-weight: 800;
-            color:#0f172a;
+            padding: 8px 0;
+            background: transparent;
+            border-bottom: 1px solid var(--ft-line);
+            font-family: Georgia, "Times New Roman", Times, serif;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--ft-text);
         }
         .panel .panel-body{
-            padding: 10px 12px;
+            padding: 12px 0;
         }
         .chart{
             width: 100%;
             height: 260px;
-            background: #ffffff;
+            background: transparent;
+        }
+        .chart svg{
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .chart-legend{
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: var(--ft-text-muted);
+        }
+        .chart-legend .dot{
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .chart-legend .bar{
+            width: 12px;
+            height: 10px;
+            border-radius: 2px;
+            display: inline-block;
+            margin-right: 6px;
         }
         .top10-table{
             width: 100%;
@@ -582,14 +653,14 @@
             font-weight: bold;
         }
         .rank-1{ background: #ffd700; color: #333; }
-        .rank-2{ background: #c0c0c0; color: #333; }
-        .rank-3{ background: #cd7f32; color: #333; }
-        .rank-other{ background: #e0e0e0; color: #333; }
-        .change-new{ color: #c62828; font-weight: bold; }
-        .change-up{ color: #2e7d32; font-weight: bold; }
-        .change-down{ color: #c62828; font-weight: bold; }
-        .latest-column{ background-color: #fff3e0 !important; }
-        .ratio-text{ color: #333; font-weight: 500; }
+        .rank-2{ background: #ddd; color: var(--ft-text); }
+        .rank-3{ background: #cd7f32; color: #fff; }
+        .rank-other{ background: var(--ft-bg-muted); color: var(--ft-text); }
+        .change-new{ color: var(--ft-neg); font-weight: bold; }
+        .change-up{ color: var(--ft-pos); font-weight: bold; }
+        .change-down{ color: var(--ft-neg); font-weight: bold; }
+        .latest-column{ background-color: rgba(0,0,0,0.03) !important; }
+        .ratio-text{ color: var(--ft-text); font-weight: 500; }
 
         @media (max-width: 980px){
             .sidebar{ width: 300px; }
@@ -1010,6 +1081,7 @@
             }
 
             html += '</tbody></table>';
+
             return html;
         }
 
@@ -1482,11 +1554,9 @@
                 o.CFF = toNum(r.netcash_finance);
                 o.DA = sumNums(
                     r.fa_ir_depr,
-                    r.ir_depr,
                     r.ia_amortize,
                     r.lpe_amortize,
-                    r.useright_asset_amortize,
-                    r.oilgas_biology_depr
+                    r.useright_asset_amortize
                 );
                 o.Gain_On_Investment_Sale = toNum(r.invest_loss);
                 o.Amort_Deferred_Charges = toNum(r.defer_income_amortize);
@@ -1569,8 +1639,8 @@
                 const totalAssetsVal = (r.Total_Assets !== null && r.Total_Assets !== undefined && !isNaN(r.Total_Assets)) ? Number(r.Total_Assets) : null;
                 const totalEquityVal = (r.Total_Equity !== null && r.Total_Equity !== undefined && !isNaN(r.Total_Equity)) ? Number(r.Total_Equity) : null;
 
-                r.Total_Short_Term_Borrowings = get('Short_Term_Debt') + get('Current_Portion_LT_Debt');
-                r.Total_Debt = r.Total_Short_Term_Borrowings + get('Long_Term_Debt') + get('Bonds_Payable');
+                r.Total_Short_Term_Borrowings = get('Short_Term_Debt') + get('Current_Portion_LT_Debt') + get('Current_Portion_Leases');
+                r.Total_Debt = r.Total_Short_Term_Borrowings + get('Long_Term_Debt') + get('Bonds_Payable') + get('Lease_Liabilities');
                 r.Total_Cash = get('Cash_Equivalents') + get('Short_Term_Investments');
                 r.Net_Debt = r.Total_Debt - r.Total_Cash;
                 r.EV = marketCapVal !== null ? (marketCapVal + r.Total_Debt - r.Total_Cash + get('Minority_Interest')) : null;
@@ -1580,7 +1650,10 @@
                 r.Gross_Profit = get('Revenue') - get('COGS');
                 r.SGA_Exp = get('Selling_Exp') + get('Admin_Exp');
                 r.Other_Operating_Exp = get('Taxes_Surcharges');
-                r.EBIT = r.Gross_Profit - get('Selling_Exp') - get('Admin_Exp') - get('RD_Exp');
+                r.EBIT = get('Operating_Income');
+                if (r.EBIT === 0 || r.EBIT === null || r.EBIT === undefined) {
+                    r.EBIT = r.Gross_Profit - get('Selling_Exp') - get('Admin_Exp') - get('RD_Exp');
+                }
                 r.DA = get('DA') ?? (get('Revenue') * 0.015);
                 r.EBITDA = r.EBIT + r.DA;
                 r.Net_Interest_Exp = get('Fin_Exp') * -1;
@@ -1694,9 +1767,9 @@
 
             const limit = currentView === 'annual' ? 50 : 40;
             const minYear = currentView === 'annual' ? 2015 : null;
-            const dateSource = currentView === 'annual' ? rowsAsc : rowsDesc;
-            const dates = getTopDates(dateSource, limit, minYear);
-            const columns = buildColumns(dates);
+            const rawDates = getTopDates(rowsAsc, limit, minYear);
+            const sortedDates = rawDates.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
+            const columns = buildColumns(sortedDates);
             const byDate = indexByDate(rowsDesc);
 
             const defaultFmtForKey = (k) => {
@@ -1740,9 +1813,9 @@
 
             const limit = currentView === 'annual' ? 50 : 40;
             const minYear = currentView === 'annual' ? 2015 : null;
-            const dateSource = currentView === 'annual' ? rowsAsc : rowsDesc;
-            const dates = getTopDates(dateSource, limit, minYear);
-            const columns = buildColumns(dates);
+            const rawDates = getTopDates(rowsAsc, limit, minYear);
+            const sortedDates = rawDates.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
+            const columns = buildColumns(sortedDates);
             const byDate = indexByDate(rowsDesc);
 
             const sections = Object.entries(model100TabConfig).map(([title, items]) => ({
@@ -1874,6 +1947,19 @@
                 capByReportDate.set(d, lastCap);
             }
 
+            const indexRowsAsc = sortByDateAsc(data?.market_index_history || [], 'date');
+            let idxPtr = 0;
+            let lastIndex = null;
+            const indexByReportDate = new Map();
+            for (const d of colsAsc) {
+                while (idxPtr < indexRowsAsc.length && normalizeDate(indexRowsAsc[idxPtr]?.date) <= normalizeDate(d)) {
+                    lastIndex = indexRowsAsc[idxPtr];
+                    idxPtr++;
+                }
+                indexByReportDate.set(d, lastIndex);
+            }
+
+            const processedMap = new Map();
             const processedData = reportDates.map((reportDate, idx) => {
                 const row = byDate.get(reportDate) || {};
                 const prevDate = reportDates[idx + 1];
@@ -1891,6 +1977,13 @@
             const prevMarketCapYi = prevDate ? mktCapToYi(capByReportDate.get(prevDate)?.mkt_cap_billion_cny) : null;
                 const marketCapChangePct = (marketCapYi !== null && prevMarketCapYi) ? ((marketCapYi - prevMarketCapYi) / prevMarketCapYi) * 100 : null;
 
+            const shIndex = toNum(indexByReportDate.get(reportDate)?.close);
+            const prevShIndex = prevDate ? toNum(indexByReportDate.get(prevDate)?.close) : null;
+            const shIndexChangePct = (shIndex !== null && prevShIndex) ? ((shIndex - prevShIndex) / prevShIndex) * 100 : null;
+            const relativeStrength = (marketCapChangePct !== null && shIndexChangePct !== null)
+                ? (marketCapChangePct - shIndexChangePct)
+                : null;
+
                 const avgAmountPerHolder = (marketCapYi !== null && holderCount)
                     ? (marketCapYi * 10000 / holderCount)
                     : null;
@@ -1901,19 +1994,122 @@
                     ? ((avgAmountPerHolder - prevAvgAmount) / prevAvgAmount) * 100
                     : (toNum(row.avg_hold_num_change ?? row.avg_shares_change_pct ?? row.avg_hold_num_change_pct) ?? null);
 
-                return {
+                const out = {
                     report_date: reportDate,
                     holder_count: holderCount,
                     holder_count_change_pct: holderChangePct,
                     Market_Cap_Billion: marketCapYi,
                     market_cap_change_pct: marketCapChangePct,
-                    relative_strength: null,
+                    relative_strength: relativeStrength,
                     avg_shares_per_holder: avgAmountPerHolder,
                     avg_shares_change_pct: avgAmountChangePct,
-                    sh_index: null,
-                    sh_index_change_pct: null
+                    sh_index: shIndex,
+                    sh_index_change_pct: shIndexChangePct
                 };
+                processedMap.set(reportDate, out);
+                return out;
             });
+
+            const dataAsc = colsAsc.map(d => processedMap.get(d)).filter(Boolean);
+
+            const renderChangeChart = (rows) => {
+                if (!rows.length) return '';
+                const valsBar = rows.map(r => toNum(r.holder_count_change_pct)).map(v => (v == null ? 0 : v));
+                const valsLine = rows.map(r => toNum(r.avg_shares_change_pct)).map(v => (v == null ? 0 : v));
+                const maxAbs = Math.max(1, ...valsBar.map(v => Math.abs(v)), ...valsLine.map(v => Math.abs(v)));
+                const w = 1000, h = 260, padL = 40, padR = 24, padT = 20, padB = 30;
+                const zeroY = padT + (h - padT - padB) * (maxAbs / (maxAbs * 2));
+                const barW = Math.max(4, Math.floor((w - padL - padR) / rows.length) - 2);
+                const xStep = (w - padL - padR) / Math.max(1, rows.length - 1);
+                const yScale = (v) => zeroY - (v / (maxAbs * 2)) * (h - padT - padB);
+                const gridLines = [-maxAbs, -maxAbs/2, 0, maxAbs/2, maxAbs].map(v => {
+                    const y = yScale(v);
+                    const label = (v * 100).toFixed(0) + '%';
+                    return `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#E6D6C7" stroke-width="0.5" stroke-dasharray="${v === 0 ? 'none' : '4,3'}" />
+                            <text x="${padL - 6}" y="${y + 4}" fill="#9A9A9A" font-size="10" text-anchor="end">${label}</text>`;
+                }).join('');
+                const xLabels = rows.map((r, i) => {
+                    if (rows.length > 20 && i % 4 !== 0) return '';
+                    const x = padL + i * xStep;
+                    const d = r.report_date || '';
+                    const label = d.substring(0, 7);
+                    return `<text x="${x}" y="${h - 8}" fill="#9A9A9A" font-size="9" text-anchor="middle">${label}</text>`;
+                }).join('');
+                let bars = '';
+                let line = '';
+                rows.forEach((r, i) => {
+                    const x = padL + i * xStep;
+                    const vb = valsBar[i];
+                    const y = yScale(vb);
+                    const bh = Math.abs(zeroY - y);
+                    bars += `<rect x="${x - barW / 2}" y="${Math.min(y, zeroY)}" width="${barW}" height="${bh}" fill="${vb >= 0 ? '#0F5E9C' : '#B00020'}" opacity="0.65" rx="1" />`;
+                });
+                rows.forEach((r, i) => {
+                    const x = padL + i * xStep;
+                    const v = valsLine[i];
+                    const y = yScale(v);
+                    line += `${i === 0 ? 'M' : 'L'} ${x} ${y} `;
+                });
+                const linePath = `<path d="${line}" fill="none" stroke="#1F7A4D" stroke-width="2.5" />`;
+                return `
+                    <div class="chart-legend">
+                        <span><i class="bar" style="background:#0F5E9C;"></i>Holder Count Chg%</span>
+                        <span><i class="dot" style="background:#1F7A4D;"></i>Avg Shares Chg%</span>
+                    </div>
+                    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+                        ${gridLines}
+                        ${xLabels}
+                        ${bars}
+                        ${linePath}
+                    </svg>
+                    <div style="font-size:10px;color:#9A9A9A;margin-top:4px;">Source: Supabase / stock-search</div>
+                `;
+            };
+
+            const renderHolderChart = (rows) => {
+                if (!rows.length) return '';
+                const valsA = rows.map(r => toNum(r.holder_count)).map(v => (v == null ? 0 : v));
+                const valsB = rows.map(r => toNum(r.avg_shares_per_holder)).map(v => (v == null ? 0 : v));
+                const maxA = Math.max(1, ...valsA);
+                const maxB = Math.max(1, ...valsB);
+                const w = 1000, h = 260, padL = 50, padR = 50, padT = 20, padB = 30;
+                const xStep = (w - padL - padR) / Math.max(1, rows.length - 1);
+                const yScaleA = (v) => (h - padB) - (v / maxA) * (h - padT - padB);
+                const yScaleB = (v) => (h - padB) - (v / maxB) * (h - padT - padB);
+                const gridYs = [0, 0.25, 0.5, 0.75, 1].map(frac => {
+                    const y = (h - padB) - frac * (h - padT - padB);
+                    const labelA = (frac * maxA / 10000).toFixed(0) + '万';
+                    return `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#E6D6C7" stroke-width="0.5" stroke-dasharray="4,3" />
+                            <text x="${padL - 6}" y="${y + 4}" fill="#9A9A9A" font-size="10" text-anchor="end">${labelA}</text>`;
+                }).join('');
+                const xLabels = rows.map((r, i) => {
+                    if (rows.length > 20 && i % 4 !== 0) return '';
+                    const x = padL + i * xStep;
+                    const d = r.report_date || '';
+                    const label = d.substring(0, 7);
+                    return `<text x="${x}" y="${h - 8}" fill="#9A9A9A" font-size="9" text-anchor="middle">${label}</text>`;
+                }).join('');
+                let lineA = '';
+                let lineB = '';
+                rows.forEach((r, i) => {
+                    const x = padL + i * xStep;
+                    lineA += `${i === 0 ? 'M' : 'L'} ${x} ${yScaleA(valsA[i])} `;
+                    lineB += `${i === 0 ? 'M' : 'L'} ${x} ${yScaleB(valsB[i])} `;
+                });
+                return `
+                    <div class="chart-legend">
+                        <span><i class="dot" style="background:#0F5E9C;"></i>Holder Count</span>
+                        <span><i class="dot" style="background:#B22222;"></i>Avg Shares Per Holder(万元)</span>
+                    </div>
+                    <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+                        ${gridYs}
+                        ${xLabels}
+                        <path d="${lineA}" fill="none" stroke="#0F5E9C" stroke-width="2.5" />
+                        <path d="${lineB}" fill="none" stroke="#B22222" stroke-width="2.5" />
+                    </svg>
+                    <div style="font-size:10px;color:#9A9A9A;margin-top:4px;">Source: Supabase / stock-search</div>
+                `;
+            };
 
             const sections = {
                 '股东人数分析': [
@@ -1958,7 +2154,21 @@
             });
 
             html += '</tbody></table>';
-            return html;
+
+            const chartsHtml = `
+                <div class="shareholders-grid">
+                    <div class="panel">
+                        <div class="panel-title">变化率分析</div>
+                        <div class="panel-body chart">${renderChangeChart(dataAsc)}</div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-title">股东人数与户均持股</div>
+                        <div class="panel-body chart">${renderHolderChart(dataAsc)}</div>
+                    </div>
+                </div>
+            `;
+
+            return html + chartsHtml;
         }
 
         function renderTop10ShareholdersTab(data) {
@@ -2196,10 +2406,9 @@
 
             if (currentAnalysisTab === 'Multiples' || currentAnalysisTab === 'EnterpriseValue' || currentAnalysisTab === 'Profitability' || currentAnalysisTab === 'ROIC' || currentAnalysisTab === 'Solvency' || currentAnalysisTab === 'Highlights') {
                 const showCols = currentView === 'annual' ? 10 : 40;
-                const rowsAscForCols = (currentView === 'annual')
-                    ? (incRows || []).slice().sort((a, b) => normalizeDate(a.report_date).localeCompare(normalizeDate(b.report_date)))
-                    : (incRows || []);
-                const columns = getTopDates(rowsAscForCols, showCols, currentView === 'annual' ? 2015 : null);
+                const rowsAscForCols = (incRows || []).slice().sort((a, b) => normalizeDate(a.report_date).localeCompare(normalizeDate(b.report_date)));
+                const rawCols = getTopDates(rowsAscForCols, showCols, currentView === 'annual' ? 2015 : null);
+                const columns = rawCols.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
                 const byBs = indexByDate(bsRows);
                 const byInc = indexByDate(incRows);
                 const byCf = indexByDate(cfRows);
@@ -2225,9 +2434,9 @@
                 const prevDateOf = (d) => {
                     const i = colIndex.get(d);
                     if (i == null) return null;
-                    const step = currentView === 'annual' ? 1 : 4; // TTM 用同比（同季度）近似
-                    const j = i + step;
-                    return j < columns.length ? columns[j] : null;
+                    const step = currentView === 'annual' ? 1 : 4;
+                    const j = i - step;
+                    return j >= 0 ? columns[j] : null;
                 };
                 const pctChange = (curr, prev) => {
                     const c = toNum(curr);
@@ -2237,15 +2446,27 @@
                 };
 
                 const cap = (d) => mktCapToYi(capByReportDate.get(d)?.mkt_cap_billion_cny);
-                const cash = (d) => toNum(byBs.get(d)?.monetaryfunds);
+                const cash = (d) => sumNums(
+                    byBs.get(d)?.monetaryfunds,
+                    byBs.get(d)?.trade_finasset,
+                    byBs.get(d)?.trade_finasset_notfvtpl,
+                    byBs.get(d)?.fvtpl_finasset,
+                    byBs.get(d)?.available_sale_finasset,
+                    byBs.get(d)?.fvtoci_finasset,
+                    byBs.get(d)?.fvtoci_ncfinasset
+                );
                 const minority = (d) => toNum(byBs.get(d)?.minority_equity);
                 const totalDebt = (d) => {
                     const bs = byBs.get(d) || {};
                     const parts = [
                         toNum(bs.short_loan),
+                        toNum(bs.short_bond_payable),
+                        toNum(bs.short_fin_payable),
+                        toNum(bs.noncurrent_liab_1year),
+                        toNum(bs.lease_liab_1year),
                         toNum(bs.long_loan),
                         toNum(bs.bond_payable),
-                        toNum(bs.noncurrent_liab_1year),
+                        toNum(bs.lease_liab),
                     ].filter(v => v !== null);
                     if (!parts.length) return null;
                     return parts.reduce((a, b) => a + b, 0);
@@ -2575,7 +2796,10 @@
                 }
 
                 if (currentAnalysisTab === 'ROIC') {
-                    const ebit = (d) => calcEbit(d);
+                    const ebit = (d) => {
+                        const op = opProfit(d);
+                        return op !== null ? op : calcEbit(d);
+                    };
                     const incomeTax = (d) => toNum((byInc.get(d) || {}).income_tax);
                     const nopat = (d) => {
                         const e = ebit(d);
@@ -2591,7 +2815,8 @@
                     };
                     const currentPortionLeases = (d) => {
                         const bs = byBs.get(d) || {};
-                        return toNum(bs.noncurrent_liab_1year) ?? toNum(bs.lease_liab_1year);
+                        // Only use explicit lease current portion if provided
+                        return toNum(bs.lease_liab_1year);
                     };
                     const longTermLeases = (d) => toNum((byBs.get(d) || {}).lease_liab);
                     const investedCapital = (d) => {

@@ -167,6 +167,26 @@ export default async function handler(req, res) {
       offset += batchSize;
     }
 
+    // 上证指数：market_index_history（日频）
+    const indexFields = ['date', 'symbol', 'market', 'close'];
+    const market_index_history = [];
+    let idxOffset = 0;
+    while (true) {
+      const { data: idxRaw, error: idxErr } = await supabase
+        .from('market_index_history')
+        .select(indexFields.join(','))
+        .eq('symbol', '000001')
+        .eq('market', 'SSE')
+        .gte('date', tenYearsAgoISO)
+        .order('date', { ascending: true })
+        .range(idxOffset, idxOffset + batchSize - 1);
+      if (idxErr) throw idxErr;
+      if (!idxRaw || idxRaw.length === 0) break;
+      market_index_history.push(...idxRaw.map(r => pick(r, indexFields)));
+      if (idxRaw.length < batchSize) break;
+      idxOffset += batchSize;
+    }
+
     // Holder count concentration: 10y（季度/半年度频率，取更多以便展示“全”）
     const hcFields = [
       'report_date',
@@ -365,6 +385,7 @@ export default async function handler(req, res) {
       cn_income_statement_10y: income_statement_10y,
       cn_cash_flow_10y: cash_flow_10y,
       cn_mkt_cap_10y: mkt_cap_10y,
+      market_index_history,
       cn_top10_shareholder_10y: top10_shareholder_10y,
       cn_holder_court_concentration_10y: holder_court_concentration_10y,
       views: {

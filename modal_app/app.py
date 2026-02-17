@@ -1,5 +1,6 @@
 import os
 import datetime as dt
+import re
 from typing import Any, Dict, Optional, Tuple
 
 import modal
@@ -76,15 +77,112 @@ def clean_value(v: Any) -> Any:
     return v
 
 
-def scale_to_yiyuan(v: Any) -> Any:
-    """AKShare/EastMoney financial fields are in 元; convert to 亿元."""
-    val = clean_value(v)
-    if val is None:
-        return None
+def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    rename = {}
+    for c in df.columns:
+        s = str(c).strip()
+        if all(ch.isupper() or ch.isdigit() or ch == "_" for ch in s):
+            rename[c] = s.lower()
+        else:
+            rename[c] = s.lower()
+    if rename:
+        df = df.rename(columns=rename)
+    return df
+
+
+def should_scale(col: str) -> bool:
+    meta_cols = {
+        "report_date",
+        "symbol",
+        "secucode",
+        "security_code",
+        "security_name",
+        "security_name_abbr",
+        "report_date_name",
+        "data_source",
+        "announcement_date",
+        "currency",
+        "report_type",
+        "opinion_type",
+        "osopinion_type",
+        "updated_at",
+        "is_audited",
+        "org_code",
+        "org_type",
+        "security_type_code",
+        "listing_state",
+    }
+    if col in meta_cols:
+        return False
+    if col in ("basic_eps", "diluted_eps"):
+        return False
+    c = col.lower()
+    if "per_share" in c or c.endswith("_ps"):
+        return False
+    if "ratio" in c or "pct" in c:
+        return False
+    if c.endswith("_yoy") or c.endswith("_change") or c.endswith("_chg"):
+        return False
+    if "code" in c or c.endswith("_code") or c.endswith("_state"):
+        return False
+    if "name" in c:
+        return False
+    if c == "count" or c.endswith("_count") or "_count_" in c:
+        return False
+    if c == "rank" or c.endswith("_rank") or "_rank_" in c:
+        return False
+    return True
+
+
+def to_float(v: Any) -> Optional[float]:
     try:
-        return float(val) / 1e8
-    except (ValueError, TypeError):
-        return val
+        if v is None:
+            return None
+        s = str(v).strip()
+        if s == "":
+            return None
+        return float(s.replace(",", ""))
+    except Exception:
+        return None
+
+
+def to_records_wide(df: pd.DataFrame, symbol: str) -> list:
+    df = normalize_columns(df)
+    # drop temporary/internal columns before upsert
+    df = df.drop(columns=[c for c in df.columns if str(c).startswith("_") or str(c) == "date_dt"], errors="ignore")
+    # drop non-schema date fields from AKShare
+    allowed_dates = {"report_date"}
+    drop_date_cols = [c for c in df.columns if str(c).endswith("_date") and str(c) not in allowed_dates]
+    if drop_date_cols:
+        df = df.drop(columns=drop_date_cols, errors="ignore")
+    if "report_date" in df.columns:
+        df["report_date"] = df["report_date"].apply(format_date)
+    elif "report_date_name" in df.columns and "report_date" not in df.columns:
+        df["report_date"] = df["report_date_name"].apply(format_date)
+    df["symbol"] = symbol
+    # prefer security_name if abbreviation present
+    if "security_name" not in df.columns and "security_name_abbr" in df.columns:
+        df["security_name"] = df["security_name_abbr"]
+    # filter invalid column names
+    cols = [c for c in df.columns if re.match(r"^[a-z0-9_]+$", str(c))]
+    # extra guard to ensure no temp columns pass through
+    cols = [c for c in cols if not str(c).startswith("_") and str(c) != "date_dt"]
+    scale_cols = {c for c in cols if should_scale(c)}
+    out = []
+    for _, r in df[cols].iterrows():
+        rec = {}
+        for k in cols:
+            v = r.get(k)
+            if k in scale_cols:
+                n = to_float(v)
+                rec[k] = None if n is None else clean_value(n / 1e8)  # 元 -> 亿元
+            elif k in ("basic_eps", "diluted_eps"):
+                rec[k] = clean_value(to_float(v))
+            else:
+                rec[k] = clean_value(v)
+        out.append(rec)
+    return out
 
 
 def fetch_with_fallback(fetch_fn, symbol: str, market: Optional[str]):
@@ -186,45 +284,13 @@ def run_fetch(item: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
         )
         bs_records = []
         if not df_bs.empty:
-            # 使用 REPORT_DATE 列作为日期筛选
-            df_bs["_dt"] = pd.to_datetime(df_bs.get("REPORT_DATE"), errors="coerce")
+            df_bs = normalize_columns(df_bs)
+            df_bs["_dt"] = pd.to_datetime(df_bs.get("report_date"), errors="coerce")
             df_bs = df_bs[df_bs["_dt"] >= cutoff]
-            # 增量筛选：只保留比已有数据更新的记录
             latest_bs = latest_dates.get("balance_sheet")
             if latest_bs:
                 df_bs = df_bs[df_bs["_dt"].dt.date > latest_bs]
-            for _, row in df_bs.iterrows():
-                rec = {
-                    "symbol": symbol,
-                    "report_date": format_date(row.get("REPORT_DATE")),
-                    "secucode": row.get("SECUCODE"),
-                    "security_name": row.get("SECURITY_NAME_ABBR"),
-                    "report_date_name": row.get("REPORT_DATE_NAME"),
-                    # 关键资产负债表字段（与数据库列名匹配）
-                    "monetaryfunds": scale_to_yiyuan(row.get("MONETARYFUNDS")),
-                    "accounts_rece": scale_to_yiyuan(row.get("ACCOUNTS_RECE")),
-                    "inventory": scale_to_yiyuan(row.get("INVENTORY")),
-                    "total_current_assets": scale_to_yiyuan(row.get("TOTAL_CURRENT_ASSETS")),
-                    "fixed_asset": scale_to_yiyuan(row.get("FIXED_ASSET")),
-                    "intangible_asset": scale_to_yiyuan(row.get("INTANGIBLE_ASSET")),
-                    "total_noncurrent_assets": scale_to_yiyuan(row.get("TOTAL_NONCURRENT_ASSETS")),
-                    "total_assets": scale_to_yiyuan(row.get("TOTAL_ASSETS")),
-                    "short_loan": scale_to_yiyuan(row.get("SHORT_LOAN")),
-                    "accounts_payable": scale_to_yiyuan(row.get("ACCOUNTS_PAYABLE")),
-                    "total_current_liab": scale_to_yiyuan(row.get("TOTAL_CURRENT_LIAB")),
-                    "long_loan": scale_to_yiyuan(row.get("LONG_LOAN")),
-                    "total_noncurrent_liab": scale_to_yiyuan(row.get("TOTAL_NONCURRENT_LIAB")),
-                    "total_liabilities": scale_to_yiyuan(row.get("TOTAL_LIABILITIES")),
-                    "share_capital": scale_to_yiyuan(row.get("SHARE_CAPITAL")),
-                    "capital_reserve": scale_to_yiyuan(row.get("CAPITAL_RESERVE")),
-                    "surplus_reserve": scale_to_yiyuan(row.get("SURPLUS_RESERVE")),
-                    "unassign_rpofit": scale_to_yiyuan(row.get("UNASSIGN_RPOFIT")),
-                    "total_parent_equity": scale_to_yiyuan(row.get("TOTAL_PARENT_EQUITY")),
-                    "minority_equity": scale_to_yiyuan(row.get("MINORITY_EQUITY")),
-                    "total_equity": scale_to_yiyuan(row.get("TOTAL_EQUITY")),
-                    "total_liab_equity": scale_to_yiyuan(row.get("TOTAL_LIAB_EQUITY")),
-                }
-                bs_records.append(rec)
+            bs_records = to_records_wide(df_bs, symbol)
 
         df_is = safe_fetch(
             "利润表",
@@ -232,19 +298,12 @@ def run_fetch(item: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
         )
         is_records = []
         if not df_is.empty:
-            df_is["_dt"] = pd.to_datetime(df_is.get("REPORT_DATE"), errors="coerce")
-            # 增量筛选
+            df_is = normalize_columns(df_is)
+            df_is["_dt"] = pd.to_datetime(df_is.get("report_date"), errors="coerce")
             latest_is = latest_dates.get("income_statement")
             if latest_is:
                 df_is = df_is[df_is["_dt"].dt.date > latest_is]
-            for _, row in df_is.iterrows():
-                is_records.append(
-                    {
-                        "symbol": symbol,
-                        "report_date": format_date(row.get("REPORT_DATE")),
-                        "total_operate_income": scale_to_yiyuan(row.get("TOTAL_OPERATE_INCOME")),
-                    }
-                )
+            is_records = to_records_wide(df_is, symbol)
 
         df_cf = safe_fetch(
             "现金流量表",
@@ -252,19 +311,12 @@ def run_fetch(item: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
         )
         cf_records = []
         if not df_cf.empty:
-            df_cf["_dt"] = pd.to_datetime(df_cf.get("REPORT_DATE"), errors="coerce")
-            # 增量筛选
+            df_cf = normalize_columns(df_cf)
+            df_cf["_dt"] = pd.to_datetime(df_cf.get("report_date"), errors="coerce")
             latest_cf = latest_dates.get("cash_flow")
             if latest_cf:
                 df_cf = df_cf[df_cf["_dt"].dt.date > latest_cf]
-            for _, row in df_cf.iterrows():
-                cf_records.append(
-                    {
-                        "symbol": symbol,
-                        "report_date": format_date(row.get("REPORT_DATE")),
-                        "netcash_operate": scale_to_yiyuan(row.get("NETCASH_OPERATE")),
-                    }
-                )
+            cf_records = to_records_wide(df_cf, symbol)
 
         df_mc = safe_fetch("市值历史", lambda: ak.stock_value_em(symbol=symbol))
         mc_records = []
