@@ -76,12 +76,13 @@ def clean_value(v: Any) -> Any:
     return v
 
 
-def scale_to_billion(v: Any) -> Any:
+def scale_to_yiyuan(v: Any) -> Any:
+    """AKShare/EastMoney financial fields are in 元; convert to 亿元."""
     val = clean_value(v)
     if val is None:
         return None
     try:
-        return float(val) / 1e9
+        return float(val) / 1e8
     except (ValueError, TypeError):
         return val
 
@@ -200,28 +201,28 @@ def run_fetch(item: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
                     "security_name": row.get("SECURITY_NAME_ABBR"),
                     "report_date_name": row.get("REPORT_DATE_NAME"),
                     # 关键资产负债表字段（与数据库列名匹配）
-                    "monetaryfunds": scale_to_billion(row.get("MONETARYFUNDS")),
-                    "accounts_rece": scale_to_billion(row.get("ACCOUNTS_RECE")),
-                    "inventory": scale_to_billion(row.get("INVENTORY")),
-                    "total_current_assets": scale_to_billion(row.get("TOTAL_CURRENT_ASSETS")),
-                    "fixed_asset": scale_to_billion(row.get("FIXED_ASSET")),
-                    "intangible_asset": scale_to_billion(row.get("INTANGIBLE_ASSET")),
-                    "total_noncurrent_assets": scale_to_billion(row.get("TOTAL_NONCURRENT_ASSETS")),
-                    "total_assets": scale_to_billion(row.get("TOTAL_ASSETS")),
-                    "short_loan": scale_to_billion(row.get("SHORT_LOAN")),
-                    "accounts_payable": scale_to_billion(row.get("ACCOUNTS_PAYABLE")),
-                    "total_current_liab": scale_to_billion(row.get("TOTAL_CURRENT_LIAB")),
-                    "long_loan": scale_to_billion(row.get("LONG_LOAN")),
-                    "total_noncurrent_liab": scale_to_billion(row.get("TOTAL_NONCURRENT_LIAB")),
-                    "total_liabilities": scale_to_billion(row.get("TOTAL_LIABILITIES")),
-                    "share_capital": scale_to_billion(row.get("SHARE_CAPITAL")),
-                    "capital_reserve": scale_to_billion(row.get("CAPITAL_RESERVE")),
-                    "surplus_reserve": scale_to_billion(row.get("SURPLUS_RESERVE")),
-                    "unassign_rpofit": scale_to_billion(row.get("UNASSIGN_RPOFIT")),
-                    "total_parent_equity": scale_to_billion(row.get("TOTAL_PARENT_EQUITY")),
-                    "minority_equity": scale_to_billion(row.get("MINORITY_EQUITY")),
-                    "total_equity": scale_to_billion(row.get("TOTAL_EQUITY")),
-                    "total_liab_equity": scale_to_billion(row.get("TOTAL_LIAB_EQUITY")),
+                    "monetaryfunds": scale_to_yiyuan(row.get("MONETARYFUNDS")),
+                    "accounts_rece": scale_to_yiyuan(row.get("ACCOUNTS_RECE")),
+                    "inventory": scale_to_yiyuan(row.get("INVENTORY")),
+                    "total_current_assets": scale_to_yiyuan(row.get("TOTAL_CURRENT_ASSETS")),
+                    "fixed_asset": scale_to_yiyuan(row.get("FIXED_ASSET")),
+                    "intangible_asset": scale_to_yiyuan(row.get("INTANGIBLE_ASSET")),
+                    "total_noncurrent_assets": scale_to_yiyuan(row.get("TOTAL_NONCURRENT_ASSETS")),
+                    "total_assets": scale_to_yiyuan(row.get("TOTAL_ASSETS")),
+                    "short_loan": scale_to_yiyuan(row.get("SHORT_LOAN")),
+                    "accounts_payable": scale_to_yiyuan(row.get("ACCOUNTS_PAYABLE")),
+                    "total_current_liab": scale_to_yiyuan(row.get("TOTAL_CURRENT_LIAB")),
+                    "long_loan": scale_to_yiyuan(row.get("LONG_LOAN")),
+                    "total_noncurrent_liab": scale_to_yiyuan(row.get("TOTAL_NONCURRENT_LIAB")),
+                    "total_liabilities": scale_to_yiyuan(row.get("TOTAL_LIABILITIES")),
+                    "share_capital": scale_to_yiyuan(row.get("SHARE_CAPITAL")),
+                    "capital_reserve": scale_to_yiyuan(row.get("CAPITAL_RESERVE")),
+                    "surplus_reserve": scale_to_yiyuan(row.get("SURPLUS_RESERVE")),
+                    "unassign_rpofit": scale_to_yiyuan(row.get("UNASSIGN_RPOFIT")),
+                    "total_parent_equity": scale_to_yiyuan(row.get("TOTAL_PARENT_EQUITY")),
+                    "minority_equity": scale_to_yiyuan(row.get("MINORITY_EQUITY")),
+                    "total_equity": scale_to_yiyuan(row.get("TOTAL_EQUITY")),
+                    "total_liab_equity": scale_to_yiyuan(row.get("TOTAL_LIAB_EQUITY")),
                 }
                 bs_records.append(rec)
 
@@ -241,7 +242,7 @@ def run_fetch(item: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
                     {
                         "symbol": symbol,
                         "report_date": format_date(row.get("REPORT_DATE")),
-                        "total_operate_income": scale_to_billion(row.get("TOTAL_OPERATE_INCOME")),
+                        "total_operate_income": scale_to_yiyuan(row.get("TOTAL_OPERATE_INCOME")),
                     }
                 )
 
@@ -261,7 +262,7 @@ def run_fetch(item: Dict[str, Any]) -> Tuple[Dict[str, Any], int]:
                     {
                         "symbol": symbol,
                         "report_date": format_date(row.get("REPORT_DATE")),
-                        "netcash_operate": scale_to_billion(row.get("NETCASH_OPERATE")),
+                        "netcash_operate": scale_to_yiyuan(row.get("NETCASH_OPERATE")),
                     }
                 )
 

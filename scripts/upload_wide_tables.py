@@ -2,6 +2,7 @@
 import os
 import sys
 import math
+import re
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -70,11 +71,21 @@ def chunked(items: List[Dict[str, Any]], size: int = 500) -> List[List[Dict[str,
     return [items[i : i + size] for i in range(0, len(items), size)]
 
 
-def df_from_csv(path: str) -> pd.DataFrame:
+def df_from_csv(path: str, nrows: Optional[int] = None) -> pd.DataFrame:
     if not os.path.exists(path):
         raise FileNotFoundError(path)
     # keep original column names (codes), but normalize later
-    return pd.read_csv(path, dtype=str, low_memory=False)
+    encodings = ["utf-8-sig", "utf-8", "gbk"]
+    last_err: Optional[Exception] = None
+    for enc in encodings:
+        try:
+            return pd.read_csv(path, dtype=str, low_memory=False, nrows=nrows, encoding=enc)
+        except UnicodeDecodeError as err:
+            last_err = err
+            continue
+    if last_err:
+        raise last_err
+    return pd.read_csv(path, dtype=str, low_memory=False, nrows=nrows)
 
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -98,7 +109,7 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_balance_sheet_keep_cols(csv_path: str) -> List[str]:
-    df = pd.read_csv(csv_path, dtype=str, low_memory=False, nrows=1)
+    df = df_from_csv(csv_path, nrows=1)
     df = normalize_columns(df)
     cols = set(df.columns)
 
@@ -135,7 +146,7 @@ def get_balance_sheet_keep_cols(csv_path: str) -> List[str]:
 
 
 def get_cash_flow_keep_cols(csv_path: str) -> List[str]:
-    df = pd.read_csv(csv_path, dtype=str, low_memory=False, nrows=1)
+    df = df_from_csv(csv_path, nrows=1)
     df = normalize_columns(df)
     cols = set(df.columns)
 
@@ -172,7 +183,7 @@ def get_cash_flow_keep_cols(csv_path: str) -> List[str]:
 
 
 def get_income_statement_keep_cols(csv_path: str) -> List[str]:
-    df = pd.read_csv(csv_path, dtype=str, low_memory=False, nrows=1)
+    df = df_from_csv(csv_path, nrows=1)
     df = normalize_columns(df)
     cols = set(df.columns)
 
@@ -216,7 +227,26 @@ def to_records_financial(df: pd.DataFrame, symbol: str, keep_cols: List[str]) ->
     elif "report_date" in df.columns:
         df["report_date"] = df["report_date"].apply(ymd8_to_date)
     else:
-        raise ValueError("missing report date column")
+        def guess_report_date_col(frame: pd.DataFrame) -> Optional[str]:
+            for col in frame.columns:
+                vals = frame[col].dropna().astype(str).head(5)
+                if vals.empty:
+                    continue
+                ok = True
+                for v in vals:
+                    s = v.strip()
+                    if not (re.match(r"^\d{8}$", s) or re.match(r"^\d{4}-\d{2}-\d{2}", s)):
+                        ok = False
+                        break
+                if ok:
+                    return col
+            return None
+
+        guessed = guess_report_date_col(df)
+        if guessed:
+            df["report_date"] = df[guessed].apply(ymd8_to_date)
+        else:
+            raise ValueError("missing report date column")
 
     df["symbol"] = symbol
 
@@ -258,6 +288,8 @@ def to_records_financial(df: pd.DataFrame, symbol: str, keep_cols: List[str]) ->
 
     # Keep only allowed cols
     cols = [c for c in keep_cols if c in df.columns]
+    # Drop columns with invalid names (garbled headers)
+    cols = [c for c in cols if re.match(r"^[a-z0-9_]+$", str(c))]
 
     # Decide scaling:
     # - AKShare/EastMoney financial amount fields are in 元
@@ -495,7 +527,7 @@ def main():
     df_bs = df_from_csv(p_bs)
     df_is = df_from_csv(p_is)
     df_cf = df_from_csv(p_cf)
-    df_mc = pd.read_csv(p_mc)
+    df_mc = df_from_csv(p_mc)
 
     rec_bs = to_records_financial(df_bs, symbol, bs_keep)
     rec_is = to_records_financial(df_is, symbol, is_keep)
