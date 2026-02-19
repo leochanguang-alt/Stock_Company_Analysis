@@ -430,9 +430,10 @@
         .label-col{
             position: sticky;
             left: 0;
-            background: var(--bg);
+            background: var(--ft-bg);
             z-index: 4;
             border-right: 1px solid var(--border);
+            box-shadow: 2px 0 0 var(--border), 8px 0 10px -10px rgba(0,0,0,0.45);
         }
         .has-spark .label-col{
             left: 46px;
@@ -458,8 +459,9 @@
         }
         thead th.label-col{
             text-align:left;
-            min-width: 180px;
-            max-width: 220px;
+            width: 260px;
+            min-width: 260px;
+            max-width: 260px;
         }
         thead th.spark-col{
             text-align: left;
@@ -478,10 +480,16 @@
             text-align:left;
             color: var(--ft-text);
             font-weight: 600;
-            min-width: 180px;
-            max-width: 220px;
+            width: 260px;
+            min-width: 260px;
+            max-width: 260px;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        /* Keep a clear separator between sticky left header and value columns */
+        thead th.label-col + th,
+        tbody td.label-col + td{
+            border-left: 1px solid var(--border);
         }
         tbody td.spark-cell{
             text-align: left;
@@ -702,6 +710,7 @@
                     </label>
                     <button id="viewBtn" style="background:#334155;">仅查看分析</button>
                 </div>
+                <div id="recognizedCodeHint" class="small-muted" style="margin: 0 0 10px;">当前识别代码：-</div>
 
                 <div id="status" class="status">等待输入股票代码。</div>
 
@@ -803,10 +812,31 @@
         let currentSymbol = '';
         let analysisData = null;
         let currentView = 'annual'; // 'annual' | 'ltm'
+        let isHKMode = false;
 
         function setStatus(message, type) {
             statusEl.textContent = message;
             statusEl.className = 'status' + (type ? ` ${type}` : '');
+        }
+
+        function formatRecognizedSymbol(rawInput = '') {
+            const source = String(selectedSymbol || rawInput || '').trim();
+            if (!source) return '-';
+            const normalized = extractSymbol(source);
+            const hk = String(normalized).match(/^(\d{1,5})\.hk$/i);
+            if (hk) return `${hk[1].padStart(5, '0')}.HK`;
+            const ashare = String(normalized).match(/^(\d{6})(\.(sh|sz))?$/i);
+            if (ashare) return ashare[1];
+            return normalized || '-';
+        }
+
+        function updateRecognizedCodeHint(rawInput = '') {
+            const hintEl = document.getElementById('recognizedCodeHint');
+            if (!hintEl) return;
+            const code = formatRecognizedSymbol(rawInput);
+            const valid = /^\d{6}$/.test(code) || /^\d{5}\.HK$/.test(code);
+            hintEl.textContent = `当前识别代码：${code}${code !== '-' && !valid ? '（未识别）' : ''}`;
+            hintEl.style.color = (code !== '-' && !valid) ? '#b91c1c' : '';
         }
 
         function resetResult() {
@@ -920,7 +950,57 @@
         // mkt_cap_billion_cny is in Bn CNY; convert to 亿元 for consistency
         function mktCapToYi(v) {
             const n = toNum(v);
-            return n === null ? null : n * 10;
+            if (n === null) return null;
+            // For dual-listed HK companies, backend already returns CNY-equivalent values.
+            // No additional conversion needed.
+            return n * 10;
+        }
+        // market table values are usually absolute currency amount (e.g., 139000000000).
+        // convert to 亿元 for unified downstream display.
+        function marketValueToYi(v) {
+            const n = toNum(v);
+            if (n === null) return null;
+            // If already in "亿" scale, keep it as-is.
+            const yi = Math.abs(n) < 1000000 ? n : (n / 1e8);
+            // For HK mode, hkse_market values are in HKD; apply conversion.
+            const HKD_TO_CNY = 0.901;
+            return yi * (isHKMode ? HKD_TO_CNY : 1);
+        }
+        function dateDiffDays(a, b) {
+            const da = new Date(normalizeDate(a));
+            const db = new Date(normalizeDate(b));
+            const ta = da.getTime(), tb = db.getTime();
+            if (!Number.isFinite(ta) || !Number.isFinite(tb)) return Number.POSITIVE_INFINITY;
+            return Math.abs(ta - tb) / 86400000;
+        }
+        function pickCapRowForDate(capsAsc, reportDate, opts = {}) {
+            const { allowFuture = false, maxGapDays = null } = opts;
+            if (!capsAsc || !capsAsc.length || !reportDate) return null;
+            const target = normalizeDate(reportDate);
+            let prev = null;
+            let next = null;
+            for (const row of capsAsc) {
+                const d = normalizeDate(row?.trade_date);
+                if (!d) continue;
+                if (d <= target) prev = row;
+                if (d >= target) { next = row; break; }
+            }
+            let picked = null;
+            if (!allowFuture || !isHKMode) {
+                picked = prev;
+            } else if (prev && next) {
+                const prevGap = dateDiffDays(target, prev.trade_date);
+                const nextGap = dateDiffDays(next.trade_date, target);
+                picked = nextGap < prevGap ? next : prev;
+            } else {
+                picked = prev || next || null;
+            }
+            if (!picked) return null;
+            if (maxGapDays != null && Number.isFinite(maxGapDays)) {
+                const gap = dateDiffDays(target, picked.trade_date);
+                if (!Number.isFinite(gap) || gap > maxGapDays) return null;
+            }
+            return picked;
         }
 
         function getTopDates(rows, limit = 6, minYear = null) {
@@ -981,9 +1061,12 @@
             return map;
         }
 
+        const HK_HIDDEN_TABS = new Set(['Holders', 'Top10Shareholders']);
+
         function renderTabs() {
             analysisTabsEl.innerHTML = '';
             TAB_ORDER.forEach(t => {
+                if (isHKMode && HK_HIDDEN_TABS.has(t.key)) return;
                 const el = document.createElement('div');
                 el.className = 'tab' + (t.key === currentAnalysisTab ? ' active' : '');
                 el.innerText = t.label;
@@ -1430,8 +1513,6 @@
                 data?.cn_mkt_cap_10y || [],
                 'trade_date'
             );
-            let capIdx = 0;
-            let lastCap = null;
 
             const byDate = new Map();
             const ensure = (d) => {
@@ -1625,12 +1706,12 @@
 
             // attach market cap
             rowsAsc.forEach(r => {
-                const d = r.report_date;
-                while (capIdx < dailyCaps.length && normalizeDate(dailyCaps[capIdx]?.trade_date) <= normalizeDate(d)) {
-                    lastCap = dailyCaps[capIdx];
-                    capIdx++;
-                }
-                r.Market_Cap = mktCapToYi(lastCap?.mkt_cap_billion_cny);
+                const capRow = pickCapRowForDate(
+                    dailyCaps,
+                    r.report_date,
+                    isHKMode ? { allowFuture: false, maxGapDays: 200 } : { allowFuture: false, maxGapDays: null }
+                );
+                r.Market_Cap = mktCapToYi(capRow?.mkt_cap_billion_cny);
             });
 
             // derived (matches old dashboard logic; missing values treated as 0)
@@ -1839,6 +1920,7 @@
 
         function computeSummary(data) {
             const { quarterly, bsRows, incRows, cfRows, mktDaily } = pickViewRows(data);
+            const marketInfo = data?.share_a_market || {};
 
             const bs = (bsRows || [])[0] || null;
             const is0 = (incRows || [])[0] || null;
@@ -1846,7 +1928,15 @@
             const mc = (mktDaily || []);
             const lastMc = mc.length ? mc[mc.length - 1] : null;
 
-            const mktCapYi = mktCapToYi(lastMc?.mkt_cap_billion_cny);
+            // HK mode: prefer latest hkse_market snapshot values.
+            // CN mode: keep historical mkt_cap_10y logic first.
+            const mktCapYiDaily = mktCapToYi(lastMc?.mkt_cap_billion_cny);
+            const mktCapYiMarket = marketValueToYi(marketInfo.market_capitalization);
+            const evYiMarket = marketValueToYi(marketInfo.enterprise_value);
+
+            const mktCapYi = isHKMode
+                ? (mktCapYiMarket ?? mktCapYiDaily)
+                : (mktCapYiDaily ?? mktCapYiMarket);
             const mktCap = mktCapYi;
 
             const cash = toNum(bs?.monetaryfunds);
@@ -1857,14 +1947,16 @@
                 toNum(bs?.lease_liab),
             ].filter(v => v !== null).reduce((a, b) => a + b, 0);
 
-            const evYi = (mktCap === null) ? null : (mktCap + debt - (cash ?? 0)); // 亿元
+            const evYi = isHKMode
+                ? (evYiMarket ?? ((mktCap === null) ? null : (mktCap + debt - (cash ?? 0))))
+                : ((mktCap === null) ? null : (mktCap + debt - (cash ?? 0))); // 亿元
             const pe = safeDiv(mktCap, toNum(is0?.parent_netprofit));
             const ocf = toNum(cf0?.netcash_operate);
             const ocfEvPct = safeDiv(ocf, evYi);
 
             return {
                 mktCapYi,
-                mktCapDate: lastMc?.trade_date || null,
+                mktCapDate: marketInfo.download_date || lastMc?.trade_date || null,
                 evYi,
                 pe,
                 latestReportDate: bs?.report_date || is0?.report_date || null,
@@ -2353,6 +2445,12 @@
             const mcStr = summary.mktCapYi == null ? '-' : fmtYiYuan(summary.mktCapYi);
             const gapStr = gapVal == null ? '-' : fmtPct(gapVal, 1);
             const dateStr = summary.mktCapDate || summary.latestReportDate || '-';
+            const sourceDate = marketInfo.download_date || '-';
+            const sourceInfo = isHKMode
+                ? `Source：hkse_market（latest） · Record Date：${sourceDate}`
+                : `Source：share_a_market / cn_mkt_cap_10y · Record Date：${sourceDate}`;
+
+            const currencyLabel = isHKMode ? 'HKD' : 'CNY';
 
             if (infoEl) {
                 infoEl.innerHTML = `
@@ -2361,6 +2459,7 @@
                         <span class="info-item">Sector：${sectorName}</span>
                         <span class="info-item">Industry：${industryName}</span>
                         <span class="info-item">Market：${marketName}</span>
+                        <span class="info-item">Currency：${currencyLabel}</span>
                     </div>
                     <div class="company-info-row">
                         <span class="info-item">EV：${evStr}</span>
@@ -2370,6 +2469,9 @@
                         <span class="info-item">aOCF(TTM)/EV：${aocfEv}</span>
                         <span class="info-item">GAP：${gapStr}</span>
                         <span class="info-item">Date：${dateStr}</span>
+                    </div>
+                    <div class="company-info-row">
+                        <span class="info-item">${sourceInfo}</span>
                     </div>
                 `;
             }
@@ -2423,15 +2525,16 @@
                     .slice()
                     .sort((a, b) => normalizeDate(a.trade_date).localeCompare(normalizeDate(b.trade_date)));
                 const colsAsc = columns.slice().sort((a, b) => normalizeDate(a).localeCompare(normalizeDate(b)));
-                let capIdx = 0;
-                let lastCapRow = null;
                 const capByReportDate = new Map();
                 for (const d of colsAsc) {
-                    while (capIdx < capsAsc.length && normalizeDate(capsAsc[capIdx].trade_date) <= normalizeDate(d)) {
-                        lastCapRow = capsAsc[capIdx];
-                        capIdx++;
-                    }
-                    capByReportDate.set(d, lastCapRow);
+                    capByReportDate.set(
+                        d,
+                        pickCapRowForDate(
+                            capsAsc,
+                            d,
+                            isHKMode ? { allowFuture: false, maxGapDays: 200 } : { allowFuture: false, maxGapDays: null }
+                        )
+                    );
                 }
 
                 const colIndex = new Map(columns.map((d, i) => [d, i]));
@@ -2984,9 +3087,35 @@
         }
 
         async function loadAnalysis(symbol) {
-            const normSymbol = (symbol || '').toLowerCase().replace(/\.(sh|sz)$/i, '');
+            const raw = (symbol || '').trim();
+            const hkMatch = raw.match(/^(\d{1,5})\.hk$/i);
+
+            if (hkMatch) {
+                isHKMode = true;
+                const hkCode = hkMatch[1].padStart(5, '0');
+                currentSymbol = hkCode;
+                analysisData = null;
+                if (HK_HIDDEN_TABS.has(currentAnalysisTab)) {
+                    currentAnalysisTab = 'Highlights';
+                }
+                analysisBoxEl.innerHTML = '<div class="loading">正在从 Supabase 读取港股数据...</div>';
+
+                try {
+                    const res = await fetch(`${API_BASE}/api/hk-analysis?symbol=${encodeURIComponent(hkCode)}`);
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+                    analysisData = data;
+                    renderAnalysis();
+                } catch (err) {
+                    analysisBoxEl.innerHTML = `<div class="loading" style="color:#b91c1c;">港股分析加载失败：${err.message}</div>`;
+                }
+                return;
+            }
+
+            isHKMode = false;
+            const normSymbol = raw.toLowerCase().replace(/\.(sh|sz)$/i, '');
             if (!normSymbol || !/^\d{6}$/.test(normSymbol)) {
-                analysisBoxEl.innerHTML = '<div class="loading">请选择或输入正确的 6 位股票代码。</div>';
+                analysisBoxEl.innerHTML = '<div class="loading">请选择或输入正确的股票代码（A股6位 / 港股如01211.hk）。</div>';
                 return;
             }
             currentSymbol = normSymbol;
@@ -3042,12 +3171,16 @@
         function selectItem(index) {
             if (index < 0 || index >= searchResults.length) return;
             const item = searchResults[index];
-            selectedSymbol = item.symbol;
+            // Normalize selected symbol:
+            // - A-share: 000333.SZ -> 000333
+            // - HK: 01211.HK -> 01211.HK
+            selectedSymbol = extractSymbol(item.code);
             symbolInput.value = `${item.code} - ${item.name}`;
             dropdown.style.display = 'none';
             setStatus(`已选择：${item.name}（${item.code}）`, '');
+            updateRecognizedCodeHint(selectedSymbol);
             // 立即刷新分析（不写入任何数据）
-            loadAnalysis(item.symbol);
+            loadAnalysis(selectedSymbol);
         }
 
         function updateActiveItem() {
@@ -3077,6 +3210,7 @@
         symbolInput.addEventListener('input', (e) => {
             const value = e.target.value.trim();
             selectedSymbol = ''; // 清除已选状态
+            updateRecognizedCodeHint(value);
             if (searchTimeout) clearTimeout(searchTimeout);
             // 输入至少1个字符就触发搜索（包括完整6位数字也显示下拉框确认）
             if (value.length >= 1) {
@@ -3118,17 +3252,49 @@
             }
         });
 
+        function extractSymbol(inputVal) {
+            const part = inputVal.split(/\s*-\s*/)[0].trim();
+            const hk = part.match(/^(\d{1,5})\.hk$/i);
+            if (hk) return hk[0];
+            const ashare = part.match(/^(\d{6})(\.(sh|sz))?$/i);
+            if (ashare) return ashare[1];
+            const digits = inputVal.match(/^(\d{6})/);
+            if (digits) return digits[1];
+            return inputVal;
+        }
+
         async function handleSubmit() {
-            // 提取股票代码：优先使用选中的，否则从输入框提取6位数字
             let symbol = selectedSymbol;
             if (!symbol) {
-                const inputVal = symbolInput.value.trim();
-                const match = inputVal.match(/^(\d{6})/);
-                symbol = match ? match[1] : inputVal;
+                symbol = extractSymbol(symbolInput.value.trim());
             }
+            updateRecognizedCodeHint(symbol);
+
+            const hkMatch = (symbol || '').match(/^(\d{1,5})\.hk$/i);
+            if (hkMatch) {
+                const hkCode = hkMatch[1].padStart(5, '0') + '.HK';
+                btn.disabled = true;
+                btn.textContent = '下载中...';
+                resetResult();
+                setStatus(`正在下载港股 ${hkCode} 数据并写入 Supabase...`, '');
+                try {
+                    const dlRes = await fetch(`${API_BASE}/api/fetch-hk-data?symbol=${encodeURIComponent(hkCode)}`);
+                    const dlData = await dlRes.json();
+                    if (!dlRes.ok) throw new Error(dlData?.error || `HTTP ${dlRes.status}`);
+                    setStatus(dlData.message || '港股数据写入完成', 'success');
+                    await loadAnalysis(symbol);
+                } catch (err) {
+                    setStatus(`港股数据下载失败：${err.message}`, 'error');
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = '下载并刷新';
+                }
+                return;
+            }
+
             const skipHolderCount = document.getElementById('skipHolderCount').checked;
             if (!symbol || !/^\d{6}$/.test(symbol)) {
-                setStatus('请选择或输入正确的6位股票代码。', 'error');
+                setStatus('请选择或输入正确的股票代码（A股6位 / 港股如01211.hk）。', 'error');
                 return;
             }
 
@@ -3197,12 +3363,13 @@
         viewBtn.addEventListener('click', async () => {
             let symbol = selectedSymbol;
             if (!symbol) {
-                const inputVal = symbolInput.value.trim();
-                const match = inputVal.match(/^(\d{6})/);
-                symbol = match ? match[1] : inputVal;
+                symbol = extractSymbol(symbolInput.value.trim());
             }
-            if (!symbol || !/^\d{6}$/.test(symbol)) {
-                setStatus('请选择或输入正确的6位股票代码。', 'error');
+            updateRecognizedCodeHint(symbol);
+            const isHK = /^\d{1,5}\.hk$/i.test(symbol);
+            const isAShare = /^\d{6}$/.test(symbol) || /^\d{6}\.(sh|sz)$/i.test(symbol);
+            if (!isHK && !isAShare) {
+                setStatus('请选择或输入正确的股票代码（A股6位 / 港股如01211.hk）。', 'error');
                 return;
             }
             setStatus('仅查看分析：正在加载...', '');
@@ -3215,6 +3382,7 @@
 
         // 初始化 tabs
         renderTabs();
+        updateRecognizedCodeHint('');
     </script>
 </body>
 </html>
