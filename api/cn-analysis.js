@@ -121,17 +121,89 @@ function groupLatestByYear(rows, dateField) {
     .map(([, r]) => r);
 }
 
-function computeTTM(rowsDesc, sumFields, opts = {}) {
-  // rowsDesc: report_date desc
+/**
+ * 将累计值转换为单季度值
+ * 中国财报的季报数据是"年初至今累计值"，需要转换为单季度值
+ * Q1: 直接使用 Q1 累计值
+ * Q2: Q2累计 - Q1累计
+ * Q3: Q3累计 - Q2累计
+ * Q4: Q4累计 - Q3累计 (或直接用年报值)
+ */
+function convertToSingleQuarter(rowsDesc, flowFields) {
+  if (!rowsDesc || rowsDesc.length === 0) return [];
+  
+  // Sort by date ascending for easier calculation
+  const rowsAsc = [...rowsDesc].sort((a, b) => 
+    String(a?.report_date || '').localeCompare(String(b?.report_date || ''))
+  );
+  
+  // Group by year
+  const byYear = new Map();
+  for (const r of rowsAsc) {
+    const d = r?.report_date;
+    if (!d) continue;
+    const y = String(d).slice(0, 4);
+    if (!byYear.has(y)) byYear.set(y, []);
+    byYear.get(y).push(r);
+  }
+  
+  const result = [];
+  
+  for (const [year, quarters] of byYear) {
+    // Sort quarters within year by date
+    quarters.sort((a, b) => String(a.report_date).localeCompare(String(b.report_date)));
+    
+    for (let i = 0; i < quarters.length; i++) {
+      const curr = quarters[i];
+      const prev = i > 0 ? quarters[i - 1] : null;
+      const currDate = String(curr.report_date);
+      const isQ1 = currDate.endsWith('-03-31');
+      
+      const singleQ = { ...curr };
+      
+      // For flow fields (income/cash flow), calculate single quarter value
+      for (const f of flowFields) {
+        const currVal = toNum(curr?.[f]);
+        if (currVal == null) {
+          singleQ[f] = null;
+          continue;
+        }
+        
+        if (isQ1 || !prev) {
+          // Q1 or no previous quarter: use as-is
+          singleQ[f] = currVal;
+        } else {
+          // Q2/Q3/Q4: subtract previous quarter's cumulative value
+          const prevVal = toNum(prev?.[f]);
+          if (prevVal != null) {
+            singleQ[f] = currVal - prevVal;
+          } else {
+            singleQ[f] = currVal;
+          }
+        }
+      }
+      
+      result.push(singleQ);
+    }
+  }
+  
+  // Sort back to descending order
+  return result.sort((a, b) => 
+    String(b?.report_date || '').localeCompare(String(a?.report_date || ''))
+  );
+}
+
+function computeTTM(singleQRowsDesc, sumFields, opts = {}) {
+  // singleQRowsDesc: single quarter data, report_date desc
   // For each anchor quarter i, sum i..i+3 (4 quarters) on given fields.
   // opts.takeFirst: fields where we take the value from the oldest quarter (e.g. begin_cce)
   // opts.takeLast:  fields where we take the value from the anchor/newest quarter (e.g. end_cce)
   const takeFirst = opts.takeFirst || [];
   const takeLast  = opts.takeLast  || [];
   const out = [];
-  for (let i = 0; i < (rowsDesc || []).length; i++) {
-    const anchor = rowsDesc[i];
-    const window = rowsDesc.slice(i, i + 4);
+  for (let i = 0; i < (singleQRowsDesc || []).length; i++) {
+    const anchor = singleQRowsDesc[i];
+    const window = singleQRowsDesc.slice(i, i + 4);
     if (window.length < 4) break;
     const record = { report_date: anchor.report_date };
     for (const f of sumFields) {
@@ -440,8 +512,13 @@ export default async function handler(req, res) {
       'rate_change_effect', 'cce_add',
       'cce_add_other', 'cce_add_balance',
     ];
-    const isTTMDesc = computeTTM(isQuarterlyDesc, incomeSumFields);
-    const cfTTMDesc = computeTTM(cfQuarterlyDesc, cashSumFields, {
+    // Convert cumulative quarterly data to single quarter values
+    const isSingleQDesc = convertToSingleQuarter(isQuarterlyDesc, incomeSumFields);
+    const cfSingleQDesc = convertToSingleQuarter(cfQuarterlyDesc, cashSumFields);
+    
+    // Compute TTM from single quarter data
+    const isTTMDesc = computeTTM(isSingleQDesc, incomeSumFields);
+    const cfTTMDesc = computeTTM(cfSingleQDesc, cashSumFields, {
       takeFirst: ['begin_cce'],
       takeLast:  ['end_cce'],
     });
@@ -530,6 +607,8 @@ export default async function handler(req, res) {
       cfAnnualDesc.forEach((row, i) => { cfAnnualDesc[i] = convertRow(row); });
       isTTMDesc.forEach((row, i) => { isTTMDesc[i] = convertRow(row); });
       cfTTMDesc.forEach((row, i) => { cfTTMDesc[i] = convertRow(row); });
+      isSingleQDesc.forEach((row, i) => { isSingleQDesc[i] = convertRow(row); });
+      cfSingleQDesc.forEach((row, i) => { cfSingleQDesc[i] = convertRow(row); });
       
       // Convert market cap data (use nearest exchange rate by date)
       const CNY_TO_HKD = 1 / 0.901;
@@ -584,8 +663,8 @@ export default async function handler(req, res) {
       views: {
         quarterly: {
           balance_sheet: bsQuarterlyDesc, // 近 1 年
-          income_statement: isQuarterlyDesc,
-          cash_flow: cfQuarterlyDesc,
+          income_statement: isSingleQDesc, // 单季度数据（非累计）
+          cash_flow: cfSingleQDesc, // 单季度数据（非累计）
           mkt_cap: mkt_cap_10y,
         },
         annual: {
@@ -597,7 +676,9 @@ export default async function handler(req, res) {
         ltm: {
           balance_sheet: bsQuarterlyDesc,
           income_statement_ttm: isTTMDesc,
+          income_statement_single_q: isSingleQDesc, // 单季度数据供前端直接显示
           cash_flow_ttm: cfTTMDesc,
+          cash_flow_single_q: cfSingleQDesc, // 单季度数据供前端直接显示
           mkt_cap: mkt_cap_10y,
         },
       },

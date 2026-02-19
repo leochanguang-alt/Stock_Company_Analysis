@@ -1202,13 +1202,14 @@
                 ? (annual.balance_sheet || [])
                 : (ltm.balance_sheet || quarterly.balance_sheet || data?.cn_balance_sheet_1y || []);
 
+            // LTM 视图使用单季度数据（非累计），与 Koyfin 保持一致
             const incRows = currentView === 'annual'
                 ? (annual.income_statement || [])
-                : (ltm.income_statement_ttm || []);
+                : (ltm.income_statement_single_q || ltm.income_statement_ttm || []);
 
             const cfRows = currentView === 'annual'
                 ? (annual.cash_flow || [])
-                : (ltm.cash_flow_ttm || []);
+                : (ltm.cash_flow_single_q || ltm.cash_flow_ttm || []);
 
             // 市值：用于展示/图表时仍用日频全量；Annual(Y) 视图再做压缩展示
             const mktDaily = (data?.cn_mkt_cap_10y || []);
@@ -1503,11 +1504,17 @@
         }
 
         // Build "old-dashboard-like" derived rows from cn_* tables (still ONLY from 6 tables)
+        // LTM 视图现在使用单季度数据（非累计），与 Koyfin 保持一致
         function buildStatementRowsForView(viewKey, data) {
             const views = data?.views || {};
             const bs = viewKey === 'ltm' ? (views?.ltm?.balance_sheet || []) : (views?.annual?.balance_sheet || []);
-            const inc = viewKey === 'ltm' ? (views?.ltm?.income_statement_ttm || []) : (views?.annual?.income_statement || []);
-            const cf = viewKey === 'ltm' ? (views?.ltm?.cash_flow_ttm || []) : (views?.annual?.cash_flow || []);
+            // LTM 视图使用单季度数据（income_statement_single_q），而非 TTM 累计数据
+            const inc = viewKey === 'ltm' 
+                ? (views?.ltm?.income_statement_single_q || views?.ltm?.income_statement_ttm || []) 
+                : (views?.annual?.income_statement || []);
+            const cf = viewKey === 'ltm' 
+                ? (views?.ltm?.cash_flow_single_q || views?.ltm?.cash_flow_ttm || []) 
+                : (views?.annual?.cash_flow || []);
 
             const dailyCaps = sortByDateAsc(
                 data?.cn_mkt_cap_10y || [],
