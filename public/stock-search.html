@@ -3101,12 +3101,18 @@
                 analysisBoxEl.innerHTML = '<div class="loading">正在从 Supabase 读取港股数据...</div>';
 
                 try {
+                    console.log('[HK] Fetching:', `${API_BASE}/api/hk-analysis?symbol=${encodeURIComponent(hkCode)}`);
                     const res = await fetch(`${API_BASE}/api/hk-analysis?symbol=${encodeURIComponent(hkCode)}`);
+                    console.log('[HK] Response status:', res.status);
                     const data = await res.json();
+                    console.log('[HK] Data keys:', Object.keys(data));
                     if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
                     analysisData = data;
+                    console.log('[HK] Calling renderAnalysis...');
                     renderAnalysis();
+                    console.log('[HK] renderAnalysis completed');
                 } catch (err) {
+                    console.error('[HK] Error:', err);
                     analysisBoxEl.innerHTML = `<div class="loading" style="color:#b91c1c;">港股分析加载失败：${err.message}</div>`;
                 }
                 return;

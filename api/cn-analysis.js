@@ -121,11 +121,6 @@ function groupLatestByYear(rows, dateField) {
     .map(([, r]) => r);
 }
 
-function toNum(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
 function computeTTM(rowsDesc, sumFields, opts = {}) {
   // rowsDesc: report_date desc
   // For each anchor quarter i, sum i..i+3 (4 quarters) on given fields.

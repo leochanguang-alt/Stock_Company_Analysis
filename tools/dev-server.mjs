@@ -26,6 +26,7 @@ const API_DIR = path.join(ROOT, 'api');
 const LOCAL_APIS = new Set([
   'fetch-hk-data',
   'hk-analysis',
+  'cn-analysis',
 ]);
 
 const MIME = {
@@ -124,17 +125,28 @@ async function handleLocalApi(apiName, req, res) {
         };
         const redirectFilePath = path.join(API_DIR, redirectApiName + '.js');
         if (fs.existsSync(redirectFilePath)) {
-          const redirectMod = await import(redirectFilePath);
-          const redirectHandler = redirectMod.default;
-          if (typeof redirectHandler === 'function') {
-            await redirectHandler(redirectReq, redirectRes);
-            const outHeaders = {
-              'access-control-allow-origin': '*',
+          try {
+            console.log(`[REDIRECT] ${apiName} -> ${redirectApiName}`);
+            const redirectMod = await import(redirectFilePath);
+            const redirectHandler = redirectMod.default;
+            if (typeof redirectHandler === 'function') {
+              await redirectHandler(redirectReq, redirectRes);
+              const outHeaders = {
+                'access-control-allow-origin': '*',
+                'content-type': 'application/json; charset=utf-8',
+                ...redirectRes._headers,
+              };
+              res.writeHead(redirectRes._statusCode, outHeaders);
+              res.end(redirectRes._body || '');
+              return true;
+            }
+          } catch (redirectErr) {
+            console.error(`[REDIRECT ERROR] ${redirectApiName}:`, redirectErr);
+            res.writeHead(500, {
               'content-type': 'application/json; charset=utf-8',
-              ...redirectRes._headers,
-            };
-            res.writeHead(redirectRes._statusCode, outHeaders);
-            res.end(redirectRes._body || '');
+              'access-control-allow-origin': '*',
+            });
+            res.end(JSON.stringify({ error: redirectErr.message }));
             return true;
           }
         }
