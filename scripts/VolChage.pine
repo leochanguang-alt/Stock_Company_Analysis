@@ -1,0 +1,126 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © leochanguang
+
+//@version=6
+
+indicator("VolChage", shorttitle="VC", overlay=true,
+          max_boxes_count=500, max_lines_count=50, max_bars_back=500)
+
+//判断成交量变化
+VolumeMA1=ta.sma(volume,66)
+VolumeMA2=ta.sma(volume,10)
+VOL1= VolumeMA1>VolumeMA2
+VOL2= VolumeMA1<VolumeMA2
+//根据成交量着色
+
+barcolor( VOL2 ? color.rgb(203, 90, 49): VOL1 ? color.rgb(0, 175, 105):na )
+
+// ─── Volume Profile ──────────────────────────────────────────────────────────
+vp_lookback = input.int(120,  title="VP 回看天数",       minval=20,   maxval=500)
+vp_rows     = input.int(200,  title="VP 价格分级数量",    minval=20,   maxval=500)
+vp_width    = input.int(40,   title="VP 最大宽度（柱）",   minval=10,   maxval=120)
+va_pct      = input.float(95, title="中心区间百分比 (%)",  minval=50.0, maxval=99.0, step=1.0)
+
+// 全局计算，确保 ta 函数状态正确维护
+vp_hi = ta.highest(high, vp_lookback)
+vp_lo = ta.lowest(low,   vp_lookback)
+
+var box[]  vp_boxes = array.new<box>()
+var line[] vp_lines = array.new<line>()
+
+if barstate.islast
+    // 清除上次绘制
+    for b in vp_boxes
+        box.delete(b)
+    array.clear(vp_boxes)
+    for l in vp_lines
+        line.delete(l)
+    array.clear(vp_lines)
+
+    bucket_size = (vp_hi - vp_lo) / vp_rows
+
+    if bucket_size > 0
+        // 累加各价格桶成交量：
+        // 对每根K线，把它的[low, high]范围内所有桶都加上一份(volume / 跨越桶数)
+        // 这样比只用midpoint更能准确反映成交量在价格区间的分布
+        vol_buckets = array.new_float(vp_rows, 0.0)
+        for i = 0 to vp_lookback - 1
+            bar_hi = high[i]
+            bar_lo = low[i]
+            bar_vol = volume[i]
+            idx_lo = math.min(math.max(math.floor((bar_lo - vp_lo) / bucket_size), 0), vp_rows - 1)
+            idx_hi = math.min(math.max(math.floor((bar_hi - vp_lo) / bucket_size), 0), vp_rows - 1)
+            span   = idx_hi - idx_lo + 1
+            vol_per_bucket = bar_vol / span
+            for j = idx_lo to idx_hi
+                array.set(vol_buckets, j, array.get(vol_buckets, j) + vol_per_bucket)
+
+        max_vol   = array.max(vol_buckets)
+        poc_idx   = array.indexof(vol_buckets, max_vol)
+        total_vol = array.sum(vol_buckets)
+        target_vol = total_vol * va_pct / 100.0
+
+        // ─── 计算中心 value area（从 POC 向两端扩展直至覆盖 target_vol） ─────
+        va_lo_idx = poc_idx
+        va_hi_idx = poc_idx
+        accum_vol = array.get(vol_buckets, poc_idx)
+
+        for _ = 1 to vp_rows
+            if accum_vol >= target_vol
+                break
+            if va_lo_idx <= 0 and va_hi_idx >= vp_rows - 1
+                break
+            vol_below = va_lo_idx > 0           ? array.get(vol_buckets, va_lo_idx - 1) : -1.0
+            vol_above = va_hi_idx < vp_rows - 1 ? array.get(vol_buckets, va_hi_idx + 1) : -1.0
+            if vol_above >= vol_below
+                va_hi_idx := va_hi_idx + 1
+                accum_vol := accum_vol + vol_above
+            else
+                va_lo_idx := va_lo_idx - 1
+                accum_vol := accum_vol + vol_below
+
+        // VP 左边缘对齐120日区间起点
+        anchor_left = bar_index - vp_lookback + 1
+
+        for i = 0 to vp_rows - 1
+            vol_i = array.get(vol_buckets, i)
+            if vol_i <= 0
+                continue
+            bar_w    = math.max(math.round(vol_i / max_vol * vp_width), 1)
+            price_lo = vp_lo + i * bucket_size
+            price_hi = price_lo + bucket_size
+            is_poc   = i == poc_idx
+            in_va    = i >= va_lo_idx and i <= va_hi_idx
+
+            bg_col = is_poc
+                     ? color.new(color.rgb(255, 152,  0), 15)                      // POC 橙色
+                     : in_va
+                         ? color.new(color.rgb(100, 181, 246), 65)                 // 中心95%：浅蓝
+                         : color.new(color.rgb(158, 158, 158), 70)                 // 外部：灰
+            br_col = is_poc
+                     ? color.new(color.rgb(255, 152,  0),  0)
+                     : in_va
+                         ? color.new(color.rgb(100, 181, 246), 30)
+                         : color.new(color.rgb(158, 158, 158), 50)
+
+            b = box.new(
+                left         = anchor_left,
+                right        = anchor_left + bar_w,
+                top          = price_hi,
+                bottom       = price_lo,
+                bgcolor      = bg_col,
+                border_color = br_col,
+                border_width = 1)
+            array.push(vp_boxes, b)
+
+        // ─── Value Area 上下边界虚线 ─────────────────────────────────────
+        vah_price = vp_lo + (va_hi_idx + 1) * bucket_size
+        val_price = vp_lo + va_lo_idx * bucket_size
+        lvah = line.new(x1=anchor_left, y1=vah_price, x2=bar_index, y2=vah_price,
+                        color=color.new(color.rgb(100, 181, 246), 30),
+                        style=line.style_dashed, width=1)
+        lval = line.new(x1=anchor_left, y1=val_price, x2=bar_index, y2=val_price,
+                        color=color.new(color.rgb(100, 181, 246), 30),
+                        style=line.style_dashed, width=1)
+        array.push(vp_lines, lvah)
+        array.push(vp_lines, lval)

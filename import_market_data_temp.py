@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Import 2026-01-31 market CSV data into temp tables, dedup, and compare.
+Import 2026-02-28 market CSV data into temp tables, dedup, and compare.
 """
 import argparse
 import json
@@ -15,9 +15,9 @@ from supabase import create_client
 
 
 CSV_DEFAULTS = {
-    "us": "original_data_csv/fr_trading_view/US/Finance_Analysis_us_2026-01-31.csv",
-    "hk": "original_data_csv/fr_trading_view/HKSE/Finance_Analysis_hk_2026-01-31.csv",
-    "cn": "original_data_csv/fr_trading_view/China/Finance_Analysis_cn_2026-01-31.csv",
+    "us": "original_data_csv/fr_trading_view/US/Finance_Analysis_US_2026-02-28.csv",
+    "hk": "original_data_csv/fr_trading_view/HKSE/Finance_Analysis_HK_2026-02-28.csv",
+    "cn": "original_data_csv/fr_trading_view/China/Finance_Analysis_CN_2026-02-28.csv",
 }
 
 TABLE_MAP = {
@@ -441,8 +441,8 @@ def main() -> None:
     parser.add_argument("--truncate", action="store_true")
     parser.add_argument("--dedup", action="store_true")
     parser.add_argument("--compare", action="store_true")
-    parser.add_argument("--report-json", default="outputs/market_temp_compare_2026-01-31.json")
-    parser.add_argument("--report-md", default="outputs/market_temp_compare_2026-01-31.md")
+    parser.add_argument("--report-json", default="outputs/market_temp_compare_2026-02-28.json")
+    parser.add_argument("--report-md", default="outputs/market_temp_compare_2026-02-28.md")
     args = parser.parse_args()
 
     load_dotenv()

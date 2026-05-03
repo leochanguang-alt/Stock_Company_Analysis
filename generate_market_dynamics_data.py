@@ -37,6 +37,10 @@ def fetch_all(supabase, table):
         offset += limit
     return pd.DataFrame(all_records)
 
+def normalize_percent_series(series):
+    s = pd.to_numeric(series, errors='coerce')
+    return s.mask(s.abs() > 1, s / 100.0)
+
 def calc_market_summary(df):
     """Calculate market summary excluding Finance sector."""
     df_non_fin = df[df['sector'] != 'Finance'].copy()
@@ -69,8 +73,15 @@ def calc_market_summary(df):
 def calc_company_data(df):
     """Calculate company-level metrics."""
     df = df.copy()
-    num_cols = ['cash_from_operating_activities_trailing_12_months', 'total_assets_quarterly',
-                'enterprise_value', 'total_debt_quarterly', 'market_capitalization', 'total_equity_quarterly']
+    num_cols = [
+        'cash_from_operating_activities_trailing_12_months',
+        'total_assets_quarterly',
+        'enterprise_value',
+        'total_debt_quarterly',
+        'market_capitalization',
+        'total_equity_quarterly',
+        'return_on_invested_capital_percent_trailing_12_months',
+    ]
     for col in num_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -81,6 +92,9 @@ def calc_company_data(df):
     df['debts'] = df['total_debt_quarterly']
     df['equity'] = df.get('total_equity_quarterly', 0)
     df['mkt_cap'] = df.get('market_capitalization', 0)
+    df['roic'] = normalize_percent_series(
+        df.get('return_on_invested_capital_percent_trailing_12_months')
+    )
     
     df['ocf_assets'] = df['ocf'] / df['assets'].replace(0, np.nan)
     df['ocf_ev'] = df['ocf'] / df['ev'].replace(0, np.nan)
@@ -103,6 +117,7 @@ def calc_company_data(df):
             'equity': float(row['equity']) if pd.notna(row['equity']) and not math.isinf(row['equity']) else 0,
             'mkt_cap': float(row['mkt_cap']) if pd.notna(row['mkt_cap']) and not math.isinf(row['mkt_cap']) else 0,
             'ocf_assets': float(row['ocf_assets']) if pd.notna(row['ocf_assets']) and not math.isinf(row['ocf_assets']) else None,
+            'roic': float(row['roic']) if pd.notna(row['roic']) and not math.isinf(row['roic']) else None,
             'ocf_ev': float(row['ocf_ev']) if pd.notna(row['ocf_ev']) and not math.isinf(row['ocf_ev']) else None,
             'multiplier': float(row['multiplier']) if pd.notna(row['multiplier']) and not math.isinf(row['multiplier']) else 0,
             'gap': float(row['gap']) if pd.notna(row['gap']) and not math.isinf(row['gap']) else None
@@ -115,8 +130,13 @@ def get_hierarchy(df):
     if df.empty:
         return [], []
     
-    num_cols = ['cash_from_operating_activities_trailing_12_months', 'total_assets_quarterly',
-                'enterprise_value', 'total_debt_quarterly']
+    num_cols = [
+        'cash_from_operating_activities_trailing_12_months',
+        'total_assets_quarterly',
+        'enterprise_value',
+        'total_debt_quarterly',
+        'return_on_invested_capital_percent_trailing_12_months',
+    ]
     for col in num_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -127,6 +147,10 @@ def get_hierarchy(df):
         s_assets = g['total_assets_quarterly'].sum()
         s_ev = g['enterprise_value'].sum()
         s_debt = g['total_debt_quarterly'].sum()
+        roic_series = normalize_percent_series(
+            g.get('return_on_invested_capital_percent_trailing_12_months')
+        )
+        roic_avg = roic_series.dropna().mean() if roic_series is not None else np.nan
         sectors.append({
             'name': str(name),
             'ocf': float(s_ocf) if not math.isnan(s_ocf) else 0,
@@ -134,6 +158,7 @@ def get_hierarchy(df):
             'ev': float(s_ev) if not math.isnan(s_ev) else 0,
             'debts': float(s_debt) if not math.isnan(s_debt) else 0,
             'ocf_assets': float(s_ocf / s_assets) if s_assets != 0 else 0,
+            'roic': float(roic_avg) if pd.notna(roic_avg) and not math.isinf(roic_avg) else None,
             'ocf_ev': float(s_ocf / s_ev) if s_ev != 0 else 0,
             'multiplier': float((s_ocf / s_assets * 100 + 5)) if s_assets != 0 else 0,
             'gap': float(g['enterprise_value'].sum() / (s_ocf * ((s_ocf/s_assets*100)+5))) if s_assets != 0 and s_ocf != 0 else None
@@ -145,6 +170,10 @@ def get_hierarchy(df):
         i_assets = g['total_assets_quarterly'].sum()
         i_ev = g['enterprise_value'].sum()
         i_debt = g['total_debt_quarterly'].sum()
+        roic_series = normalize_percent_series(
+            g.get('return_on_invested_capital_percent_trailing_12_months')
+        )
+        roic_avg = roic_series.dropna().mean() if roic_series is not None else np.nan
         industries.append({
             'name': str(i_name),
             'sector': str(s_name),
@@ -153,6 +182,7 @@ def get_hierarchy(df):
             'ev': float(i_ev) if not math.isnan(i_ev) else 0,
             'debts': float(i_debt) if not math.isnan(i_debt) else 0,
             'ocf_assets': float(i_ocf / i_assets) if i_assets != 0 else 0,
+            'roic': float(roic_avg) if pd.notna(roic_avg) and not math.isinf(roic_avg) else None,
             'ocf_ev': float(i_ocf / i_ev) if i_ev != 0 else 0,
             'multiplier': float((i_ocf / i_assets * 100 + 5)) if i_assets != 0 else 0,
             'gap': float(i_ev / (i_ocf * ((i_ocf/i_assets*100)+5))) if i_assets != 0 and i_ocf != 0 else None

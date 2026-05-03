@@ -219,6 +219,18 @@ const server = http.createServer(async (req, res) => {
     return proxyToProduction(req, res);
   }
 
+  if (
+    pathname === '/market_dynamics_dashboard.html' ||
+    pathname === '/market_dynamics_data.js' ||
+    pathname === '/recommend_data.js'
+  ) {
+    const rootFile = path.join(ROOT, pathname.slice(1));
+    if (serveStatic(rootFile, res)) {
+      console.log(`[STATIC] ${pathname}`);
+      return;
+    }
+  }
+
   const filePath = path.join(PUBLIC, pathname === '/' ? 'index.html' : pathname);
   if (serveStatic(filePath, res)) {
     console.log(`[STATIC] ${pathname}`);

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HK Stock Validation Test</title>
+</head>
+<body>
+    <h1>HK Stock Validation Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        // Test the validation logic
+        const testCases = [
+            { symbol: '01211', expected: false, description: 'Pure 5-digit number (old bug)' },
+            { symbol: '01211.HK', expected: true, description: 'HK stock with suffix (fixed)' },
+            { symbol: '01211.hk', expected: true, description: 'HK stock lowercase suffix' },
+            { symbol: '600031', expected: true, description: 'A-share 6-digit' },
+            { symbol: '600031.SH', expected: true, description: 'A-share with .SH' },
+            { symbol: '000001.SZ', expected: true, description: 'A-share with .SZ' },
+            { symbol: 'AAPL', expected: false, description: 'Invalid format' }
+        ];
+        
+        const results = [];
+        
+        testCases.forEach(test => {
+            const isHK = /^\d{1,5}\.hk$/i.test(test.symbol);
+            const isAShare = /^\d{6}$/.test(test.symbol) || /^\d{6}\.(sh|sz)$/i.test(test.symbol);
+            const isValid = isHK || isAShare;
+            const passed = isValid === test.expected;
+            
+            results.push({
+                symbol: test.symbol,
+                description: test.description,
+                isValid: isValid,
+                expected: test.expected,
+                passed: passed ? '✅ PASS' : '❌ FAIL'
+            });
+        });
+        
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML = '<table border="1" cellpadding="10"><tr><th>Symbol</th><th>Description</th><th>Valid?</th><th>Expected</th><th>Result</th></tr>' +
+            results.map(r => `<tr><td>${r.symbol}</td><td>${r.description}</td><td>${r.isValid}</td><td>${r.expected}</td><td>${r.passed}</td></tr>`).join('') +
+            '</table>';
+        
+        console.log('Test Results:', results);
+    </script>
+</body>
+</html>

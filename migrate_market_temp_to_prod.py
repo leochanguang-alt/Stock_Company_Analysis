@@ -6,8 +6,8 @@ import argparse
 import os
 from typing import List
 
-import httpx
 from dotenv import load_dotenv
+from supabase import create_client
 
 
 TABLE_MAP = {
@@ -49,40 +49,41 @@ PROD_COLUMNS = [
 ]
 
 
-def execute_sql(url: str, key: str, sql: str) -> None:
-    endpoint = f"{url}/rest/v1/rpc/exec_sql"
-    payload = {"query": sql}
-    headers = {
-        "Content-Type": "application/json",
-        "apikey": key,
-        "Authorization": f"Bearer {key}",
-    }
-    resp = httpx.post(endpoint, json=payload, headers=headers, timeout=60.0)
-    if resp.status_code not in (200, 201, 204):
-        raise RuntimeError(f"SQL 执行失败: {resp.status_code} - {resp.text}")
+def delete_by_date(supabase, table: str, date_value: str) -> None:
+    supabase.table(table).delete().eq("download_date", date_value).execute()
 
 
-def build_insert_sql(temp_table: str, prod_table: str, date_value: str) -> str:
-    cols = ", ".join(PROD_COLUMNS)
-    return f"""
-INSERT INTO public.{prod_table} ({cols})
-SELECT {cols}
-FROM public.{temp_table}
-WHERE download_date = '{date_value}';
-"""
+def fetch_temp_rows(supabase, table: str, date_value: str) -> List[dict]:
+    rows: List[dict] = []
+    offset = 0
+    while True:
+        res = (
+            supabase.table(table)
+            .select(",".join(PROD_COLUMNS))
+            .eq("download_date", date_value)
+            .range(offset, offset + 999)
+            .execute()
+        )
+        if not res.data:
+            break
+        rows.extend(res.data)
+        if len(res.data) < 1000:
+            break
+        offset += 1000
+    return rows
 
 
-def build_delete_sql(prod_table: str, date_value: str) -> str:
-    return f"DELETE FROM public.{prod_table} WHERE download_date = '{date_value}';"
-
-
-def build_clear_temp_sql(temp_table: str, date_value: str) -> str:
-    return f"DELETE FROM public.{temp_table} WHERE download_date = '{date_value}';"
+def insert_batches(supabase, table: str, rows: List[dict], batch_size: int = 500) -> None:
+    for i in range(0, len(rows), batch_size):
+        batch = rows[i : i + batch_size]
+        res = supabase.table(table).insert(batch).execute()
+        if res.data is None:
+            raise RuntimeError(f"{table} 插入失败: {res}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--date", required=True, help="迁移日期，如 2026-01-31")
+    parser.add_argument("--date", required=True, help="迁移日期，如 2026-02-28")
     parser.add_argument("--market", choices=["us", "hk", "cn", "all"], default="all")
     parser.add_argument("--replace", action="store_true", help="先删除生产表中同日期记录")
     parser.add_argument("--clear-temp", action="store_true", help="迁移后清空 temp 表同日期记录")
@@ -94,6 +95,7 @@ def main() -> None:
     if not url or not key:
         raise RuntimeError("缺少 SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY")
 
+    supabase = create_client(url, key)
     markets = ["us", "hk", "cn"] if args.market == "all" else [args.market]
     for market_key in markets:
         temp_table = TABLE_MAP[market_key]["temp"]
@@ -102,14 +104,19 @@ def main() -> None:
 
         if args.replace:
             print(f"删除 {prod_table} 里 {args.date} 数据")
-            execute_sql(url, key, build_delete_sql(prod_table, args.date))
+            delete_by_date(supabase, prod_table, args.date)
 
-        execute_sql(url, key, build_insert_sql(temp_table, prod_table, args.date))
-        print(f"完成插入 {prod_table}")
+        rows = fetch_temp_rows(supabase, temp_table, args.date)
+        if not rows:
+            print(f"{temp_table} 没有 {args.date} 数据，跳过")
+            continue
+
+        insert_batches(supabase, prod_table, rows)
+        print(f"完成插入 {prod_table} ({len(rows)} 条)")
 
         if args.clear_temp:
             print(f"清空 {temp_table} 里 {args.date} 数据")
-            execute_sql(url, key, build_clear_temp_sql(temp_table, args.date))
+            delete_by_date(supabase, temp_table, args.date)
 
 
 if __name__ == "__main__":

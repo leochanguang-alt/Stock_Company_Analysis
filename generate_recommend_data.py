@@ -83,7 +83,8 @@ def calculate_metrics(df):
         'market_capitalization',
         'total_equity_quarterly',
         'exponential_moving_average_120_1_day',
-        'simple_moving_average_120_1_day'
+        'simple_moving_average_120_1_day',
+        'return_on_invested_capital_percent_trailing_12_months',
     ]
     for col in num_cols:
         if col in df.columns:
@@ -98,6 +99,8 @@ def calculate_metrics(df):
     df['equity'] = df['total_equity_quarterly']
     df['ema'] = df['exponential_moving_average_120_1_day']
     df['sma'] = df['simple_moving_average_120_1_day']
+    roic_raw = df['return_on_invested_capital_percent_trailing_12_months']
+    df['roic'] = roic_raw.mask(roic_raw.abs() > 1, roic_raw / 100.0)
     
     # OCF/Assets ratio
     df['ocf_assets'] = df['ocf'] / df['assets'].replace(0, np.nan)
@@ -168,6 +171,7 @@ def build_recommendation_record(row, next_mkt_cap=None):
         'ocf': safe_float(row.get('ocf')),
         'ocf_fmt': format_large_number(safe_float(row.get('ocf'))),
         'ocf_assets': safe_float(row.get('ocf_assets')),
+        'roic': safe_float(row.get('roic')),
         'ocf_ev': safe_float(row.get('ocf_ev')),
         'gap': safe_float(row.get('gap')),
         'ema': safe_float(row.get('ema')),

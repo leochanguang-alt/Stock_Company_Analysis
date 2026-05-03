@@ -681,6 +681,7 @@
                             <th data-col="equity" onclick="sortRecTable('equity')">Equity <span class="sort-icon">⇅</span></th>
                             <th data-col="debt" onclick="sortRecTable('debt')">Debt <span class="sort-icon">⇅</span></th>
                             <th data-col="ocf_assets" onclick="sortRecTable('ocf_assets')">OCF/Assets <span class="sort-icon">⇅</span></th>
+                            <th data-col="roic" onclick="sortRecTable('roic')">ROIC <span class="sort-icon">⇅</span></th>
                             <th data-col="ocf_ev" onclick="sortRecTable('ocf_ev')">OCF/EV <span class="sort-icon">⇅</span></th>
                             <th data-col="gap" onclick="sortRecTable('gap')">GAP <span class="sort-icon">⇅</span></th>
                             <th data-col="mkt_cap_change_pct" onclick="sortRecTable('mkt_cap_change_pct')">Mkt Cap Δ <span class="sort-icon">⇅</span></th>
@@ -938,6 +939,7 @@
             <th data-col="debts" onclick="sortTable('${tableId}', 'debts')">Debts <span class="sort-icon"></span></th>
             <th data-col="ev" onclick="sortTable('${tableId}', 'ev')">EV <span class="sort-icon"></span></th>
             <th data-col="ocf_assets" onclick="sortTable('${tableId}', 'ocf_assets')">OCF/Assets <span class="sort-icon"></span></th>
+            <th data-col="roic" onclick="sortTable('${tableId}', 'roic')">ROIC <span class="sort-icon"></span></th>
             <th data-col="ocf_ev" onclick="sortTable('${tableId}', 'ocf_ev')">OCF/EV <span class="sort-icon"></span></th>
             <th data-col="multiplier" onclick="sortTable('${tableId}', 'multiplier')">Multiplier <span class="sort-icon"></span></th>
             <th data-col="gap" onclick="sortTable('${tableId}', 'gap')">Gap <span class="sort-icon"></span></th>
@@ -994,6 +996,7 @@
                 <td>${fL(item.debts)}</td>
                 <td>${fL(item.ev)}</td>
                 <td>${isNeg ? 'n/a' : fP(item.ocf_assets)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.roic)}</td>
                 <td>${isNeg ? 'n/a' : fP(item.ocf_ev)}</td>
                 <td>${isNeg ? 'n/a' : fN(item.multiplier, 1) + 'x'}</td>
                 <td class="${isNeg ? '' : (item.gap < 1 ? 'positive' : 'negative')}">${isNeg ? 'n/a' : fN(item.gap)}</td>
@@ -1023,6 +1026,7 @@
                 <td>${fL(item.debts)}</td>
                 <td>${fL(item.ev)}</td>
                 <td>${isNeg ? 'n/a' : fP(item.ocf_assets)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.roic)}</td>
                 <td>${isNeg ? 'n/a' : fP(item.ocf_ev)}</td>
                 <td>${isNeg ? 'n/a' : fN(item.multiplier, 1) + 'x'}</td>
                 <td class="${isNeg ? '' : (item.gap < 1 ? 'positive' : 'negative')}">${isNeg ? 'n/a' : fN(item.gap)}</td>
@@ -1053,6 +1057,7 @@
                 <td>${fL(item.debts)}</td>
                 <td>${fL(item.ev)}</td>
                 <td>${isNeg ? 'n/a' : fP(item.ocf_assets)}</td>
+                <td>${isNeg ? 'n/a' : fP(item.roic)}</td>
                 <td>${isNeg ? 'n/a' : fP(item.ocf_ev)}</td>
                 <td>${isNeg ? 'n/a' : fN(item.multiplier, 1) + 'x'}</td>
                 <td class="${isNeg ? '' : (item.gap < 1 ? 'positive' : 'negative')}">${isNeg ? 'n/a' : fN(item.gap)}</td>
@@ -1329,6 +1334,7 @@
                 <td>${s.equity_fmt || '-'}</td>
                 <td>${s.debt_fmt || '-'}</td>
                 <td class="${s.ocf_assets > 0.2 ? 'positive' : ''}">${fP(s.ocf_assets)}</td>
+                <td class="${s.roic > 0.1 ? 'positive' : ''}">${fP(s.roic)}</td>
                 <td class="${s.ocf_ev > 0.2 ? 'positive' : ''}">${fP(s.ocf_ev)}</td>
                 <td class="${s.gap < 0.5 ? 'positive' : ''}">${s.gap !== null ? s.gap.toFixed(3) : '-'}</td>
                 <td>${changePct}</td>
